@@ -470,18 +470,219 @@ const LyricsSearchApp = () => {
           </div>
         )}
 
-        {/* Definitions Tab */}
-        {activeTab === 'definitions' && (
+      {/* Definitions Tab */}
+      {activeTab === 'definitions' && (
+        <div>
+          <div className="mb-6">
+            <div className="relative">
+              <Book className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
+              <input
+                type="text"
+                placeholder="Enter a word to get its definition..."
+                value={definitionQuery}
+                onChange={(e) => setDefinitionQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && searchDefinition(definitionQuery)}
+                className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+              <button
+                onClick={() => searchDefinition(definitionQuery)}
+                disabled={definitionLoading}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
+                    : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
+                }`}
+              >
+                {definitionLoading ? '...' : 'Define'}
+              </button>
+            </div>
+          </div>
+
+          {definitionLoading && (
+            <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Looking up definition...
+            </div>
+          )}
+
+          {definitionResults && (
+            <div className="space-y-4">
+              {definitionResults.length > 0 ? (
+                definitionResults.map((entry, entryIndex) => (
+                  <div key={entryIndex} className={`rounded-lg border p-6 transition-colors ${
+                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {entry.word}
+                      </h2>
+                      <button
+                        onClick={() => searchInLyrics(entry.word)}
+                        className={`text-sm px-3 py-1 rounded transition-colors ${
+                          darkMode 
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        Search in lyrics
+                      </button>
+                    </div>
+                    
+                    {entry.phonetics && entry.phonetics[0] && (
+                      <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {entry.phonetics[0].text}
+                      </p>
+                    )}
+
+                    {entry.meanings.map((meaning, meaningIndex) => (
+                      <div key={meaningIndex} className="mb-4">
+                        <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {meaning.partOfSpeech}
+                        </h3>
+                        <div className="space-y-2">
+                          {meaning.definitions.slice(0, 3).map((def, defIndex) => (
+                            <div key={defIndex}>
+                              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {defIndex + 1}. {def.definition}
+                              </p>
+                              {def.example && (
+                                <p className={`text-sm italic mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Example: "{def.example}"
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No definition found for "{definitionQuery}"
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+        {/* Synonyms Tab */}
+        {activeTab === 'synonyms' && (
           <div>
             <div className="mb-6">
               <div className="relative">
-                <Book className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
+                <Shuffle className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
                 <input
                   type="text"
-                  placeholder="Enter a word to get its definition..."
-                  value={definitionQuery}
-                  onChange={(e) => setDefinitionQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchDefinition(definitionQuery)}
+                  placeholder="Find synonyms and antonyms..."
+                  value={synonymQuery}
+                  onChange={(e) => setSynonymQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchSynonyms(synonymQuery)}
+                  className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                  }`}
+                />
+                <button
+                  onClick={() => searchSynonyms(synonymQuery)}
+                  disabled={synonymLoading}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
+                      : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
+                  }`}
+                >
+                  {synonymLoading ? '...' : 'Search'}
+                </button>
+              </div>
+            </div>
+
+            {synonymLoading && (
+              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Finding synonyms and antonyms...
+              </div>
+            )}
+
+            {synonymResults && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className={`rounded-lg border p-6 transition-colors ${
+                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Synonyms for "{synonymQuery}"
+                  </h3>
+                  {synonymResults.synonyms.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {synonymResults.synonyms.map((word, index) => (
+                        <button
+                          key={index}
+                          onClick={() => searchInLyrics(word.word)}
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                            darkMode 
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {word.word}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No synonyms found
+                    </p>
+                  )}
+                </div>
+
+                <div className={`rounded-lg border p-6 transition-colors ${
+                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Antonyms for "{synonymQuery}"
+                  </h3>
+                  {synonymResults.antonyms.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {synonymResults.antonyms.map((word, index) => (
+                        <button
+                          key={index}
+                          onClick={() => searchInLyrics(word.word)}
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                            darkMode 
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {word.word}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No antonyms found
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Rhymes Tab */}
+        {activeTab === 'rhymes' && (
+          <div>
+            <div className="mb-6">
+              <div className="relative">
+                <Music className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
+                <input
+                  type="text"
+                  placeholder="Find words that rhyme..."
+                  value={rhymeQuery}
+                  onChange={(e) => setRhymeQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchRhymes(rhymeQuery)}
                   className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
                     darkMode 
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
