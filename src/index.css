@@ -393,4 +393,14 @@ input:focus {
   .md\\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-}
+
+  .tab-container {
+    flex-wrap: wrap;
+    gap: 0.25rem !important;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+}  

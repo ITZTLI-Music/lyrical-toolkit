@@ -307,7 +307,7 @@ const LyricsSearchApp = () => {
               </h1>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 tab-container">
               {['search', 'definitions', 'synonyms', 'rhymes', 'upload', 'stats'].map((tab) => {
                 const icons = {
                   search: Search,
@@ -323,10 +323,10 @@ const LyricsSearchApp = () => {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize tab-button ${
                       activeTab === tab 
                         ? darkMode 
-                          ? 'bg-gray-700 text-white' 
+                          ? 'bg-gray-600 text-white'  // Changed from bg-gray-700
                           : 'bg-gray-900 text-white'
                         : darkMode
                           ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -341,47 +341,103 @@ const LyricsSearchApp = () => {
             </div>
           </div>
 
-          {/* Search Bar - Always visible for lyrics search */}
-          {activeTab === 'search' && (
-            <>
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
-                <input
-                  type="text"
-                  placeholder="Search your lyrics..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
+      {/* Universal Search Bar - Show for all tabs except upload and stats */}
+      {!['upload', 'stats'].includes(activeTab) && (
+        <>
+          <div className="relative">
+            {/* Dynamic icon based on active tab */}
+            {activeTab === 'search' && <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
+            {activeTab === 'definitions' && <Book className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
+            {activeTab === 'synonyms' && <Shuffle className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
+            {activeTab === 'rhymes' && <Music className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
+            
+            <input
+              type="text"
+              placeholder={
+                activeTab === 'search' ? "Search your lyrics..." :
+                activeTab === 'definitions' ? "Enter a word to get its definition..." :
+                activeTab === 'synonyms' ? "Find synonyms and antonyms..." :
+                activeTab === 'rhymes' ? "Find words that rhyme..." : ""
+              }
+              value={
+                activeTab === 'search' ? searchQuery :
+                activeTab === 'definitions' ? definitionQuery :
+                activeTab === 'synonyms' ? synonymQuery :
+                activeTab === 'rhymes' ? rhymeQuery : ""
+              }
+              onChange={(e) => {
+                if (activeTab === 'search') handleSearch(e.target.value);
+                else if (activeTab === 'definitions') setDefinitionQuery(e.target.value);
+                else if (activeTab === 'synonyms') setSynonymQuery(e.target.value);
+                else if (activeTab === 'rhymes') setRhymeQuery(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (activeTab === 'definitions') searchDefinition(definitionQuery);
+                  else if (activeTab === 'synonyms') searchSynonyms(synonymQuery);
+                  else if (activeTab === 'rhymes') searchRhymes(rhymeQuery);
+                }
+              }}
+              className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-black placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
+            />
+            
+            {/* Dynamic search button - only show for tabs that need it */}
+            {activeTab !== 'search' && (
+              <button
+                onClick={() => {
+                  if (activeTab === 'definitions') searchDefinition(definitionQuery);
+                  else if (activeTab === 'synonyms') searchSynonyms(synonymQuery);
+                  else if (activeTab === 'rhymes') searchRhymes(rhymeQuery);
+                }}
+                disabled={
+                  (activeTab === 'definitions' && definitionLoading) ||
+                  (activeTab === 'synonyms' && synonymLoading) ||
+                  (activeTab === 'rhymes' && rhymeLoading)
+                }
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
+                    : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
+                }`}
+              >
+                {(activeTab === 'definitions' && definitionLoading) || 
+                (activeTab === 'synonyms' && synonymLoading) || 
+                (activeTab === 'rhymes' && rhymeLoading) ? '...' : 
+                activeTab === 'definitions' ? 'Define' :
+                activeTab === 'synonyms' ? 'Search' :
+                activeTab === 'rhymes' ? 'Find Rhymes' : 'Search'}
+              </button>
+            )}
+          </div>
+          
+          {/* Search History - only show for main search tab */}
+          {activeTab === 'search' && searchHistory.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Recent:</span>
+              {searchHistory.slice(0, 5).map((term, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSearch(term)}
+                  className={`text-sm px-3 py-1 rounded-full transition-colors ${
                     darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
-                />
-              </div>
-
-              {/* Search History */}
-              {searchHistory.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Recent:</span>
-                  {searchHistory.slice(0, 5).map((term, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSearch(term)}
-                      className={`text-sm px-3 py-1 rounded-full transition-colors ${
-                        darkMode 
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
           )}
-        </div>
+        </>
+      )}
+        </div>  {/* Add this closing div for the header */}
       </div>
+      
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -470,39 +526,10 @@ const LyricsSearchApp = () => {
           </div>
         )}
 
-      {/* Definitions Tab */}
-      {activeTab === 'definitions' && (
-        <div>
-          <div className="mb-6">
-            <div className="relative">
-              <Book className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
-              <input
-                type="text"
-                placeholder="Enter a word to get its definition..."
-                value={definitionQuery}
-                onChange={(e) => setDefinitionQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && searchDefinition(definitionQuery)}
-                className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
-              />
-              <button
-                onClick={() => searchDefinition(definitionQuery)}
-                disabled={definitionLoading}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
-                    : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
-                }`}
-              >
-                {definitionLoading ? '...' : 'Define'}
-              </button>
-            </div>
-          </div>
-
-          {definitionLoading && (
+        {/* Definitions Tab */}
+        {activeTab === 'definitions' && (
+          <div>
+            {definitionLoading && (
             <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Looking up definition...
             </div>
@@ -572,35 +599,6 @@ const LyricsSearchApp = () => {
         {/* Synonyms Tab */}
         {activeTab === 'synonyms' && (
           <div>
-            <div className="mb-6">
-              <div className="relative">
-                <Shuffle className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
-                <input
-                  type="text"
-                  placeholder="Find synonyms and antonyms..."
-                  value={synonymQuery}
-                  onChange={(e) => setSynonymQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchSynonyms(synonymQuery)}
-                  className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
-                />
-                <button
-                  onClick={() => searchSynonyms(synonymQuery)}
-                  disabled={synonymLoading}
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
-                      : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
-                  }`}
-                >
-                  {synonymLoading ? '...' : 'Search'}
-                </button>
-              </div>
-            </div>
-
             {synonymLoading && (
               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 Finding synonyms and antonyms...
@@ -674,35 +672,6 @@ const LyricsSearchApp = () => {
         {/* Rhymes Tab */}
         {activeTab === 'rhymes' && (
           <div>
-            <div className="mb-6">
-              <div className="relative">
-                <Music className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />
-                <input
-                  type="text"
-                  placeholder="Find words that rhyme..."
-                  value={rhymeQuery}
-                  onChange={(e) => setRhymeQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchRhymes(rhymeQuery)}
-                  className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
-                />
-                <button
-                  onClick={() => searchRhymes(rhymeQuery)}
-                  disabled={rhymeLoading}
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
-                      : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
-                  }`}
-                >
-                  {rhymeLoading ? '...' : 'Find Rhymes'}
-                </button>
-              </div>
-            </div>
-
             {rhymeLoading && (
               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 Finding rhymes...
