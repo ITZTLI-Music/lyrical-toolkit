@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Upload, FileText, Clock, BarChart3, Download, X, Plus, Moon, Sun, Book, Shuffle, Music } from 'lucide-react';
+import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle, Music } from 'lucide-react';
 
 const LyricsSearchApp = () => {
   const [songs, setSongs] = useState([]);
