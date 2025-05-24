@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle, Music } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 const LyricsSearchApp = () => {
   const [songs, setSongs] = useState([]);
@@ -77,11 +78,11 @@ const LyricsSearchApp = () => {
           
           const song = {
             id: Date.now() + Math.random(),
-            title: songTitle,
-            lyrics: content,
+            title: DOMPurify.sanitize(songTitle),
+            lyrics: DOMPurify.sanitize(content),
             wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
             dateAdded: new Date().toISOString(),
-            filename: file.name
+            filename: DOMPurify.sanitize(file.name)
           };
           
           newSongs.push(song);
@@ -117,13 +118,28 @@ const LyricsSearchApp = () => {
     const query = searchQuery || highlightWord;
     if (!query.trim()) return [];
 
-    const queryLower = query.toLowerCase();
     const results = [];
+    
+    // Check if query is wrapped in quotes for exact matching
+    const isExactMatch = query.startsWith('"') && query.endsWith('"') && query.length > 2;
+    const searchTerm = isExactMatch ? query.slice(1, -1) : query; // Remove quotes if present
+    const searchLower = searchTerm.toLowerCase();
 
     songs.forEach(song => {
       const lines = song.lyrics.split('\n');
       lines.forEach((line, lineIndex) => {
-        if (line.toLowerCase().includes(queryLower)) {
+        let matches = false;
+        
+        if (isExactMatch) {
+          // Exact word matching - use word boundaries
+          const wordRegex = new RegExp(`\\b${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          matches = wordRegex.test(line);
+        } else {
+          // Regular substring matching
+          matches = line.toLowerCase().includes(searchLower);
+        }
+        
+        if (matches) {
           const contextStart = Math.max(0, lineIndex - 1);
           const contextEnd = Math.min(lines.length - 1, lineIndex + 1);
           const context = lines.slice(contextStart, contextEnd + 1);
@@ -134,7 +150,8 @@ const LyricsSearchApp = () => {
             matchingLine: line,
             lineNumber: lineIndex + 1,
             context: context,
-            contextStart: contextStart
+            contextStart: contextStart,
+            isExactMatch: isExactMatch
           });
         }
       });
@@ -181,20 +198,45 @@ const LyricsSearchApp = () => {
     setDefinitionLoading(false);
   };
 
-  // DataMuse API for synonyms
+  // Enhanced DataMuse API for synonyms with multiple antonym sources
   const searchSynonyms = async (word) => {
     if (!word.trim()) return;
     
     setSynonymLoading(true);
     setHighlightWord(word);
     try {
-      const [synonymsResponse, antonymsResponse] = await Promise.all([
+      const [synonymsResponse, antonymsResponse, relatedResponse] = await Promise.all([
         fetch(`https://api.datamuse.com/words?rel_syn=${word.toLowerCase()}&max=20`),
-        fetch(`https://api.datamuse.com/words?rel_ant=${word.toLowerCase()}&max=20`)
+        fetch(`https://api.datamuse.com/words?rel_ant=${word.toLowerCase()}&max=20`),
+        // Also try related words that might include antonyms
+        fetch(`https://api.datamuse.com/words?ml=${word.toLowerCase()}&max=30`)
       ]);
       
       const synonyms = synonymsResponse.ok ? await synonymsResponse.json() : [];
-      const antonyms = antonymsResponse.ok ? await antonymsResponse.json() : [];
+      let antonyms = antonymsResponse.ok ? await antonymsResponse.json() : [];
+      const related = relatedResponse.ok ? await relatedResponse.json() : [];
+      
+      // If we don't have many antonyms, try to find more from related words
+      if (antonyms.length < 5) {
+        // Look for common antonym patterns in related words
+        const antonymPatterns = ['un', 'non', 'dis', 'in', 'im', 'ir', 'anti'];
+        const moreAntonyms = related.filter(relatedWord => {
+          const wordLower = relatedWord.word.toLowerCase();
+          const searchLower = word.toLowerCase();
+          
+          // Check if it starts with common antonym prefixes
+          return antonymPatterns.some(prefix => 
+            wordLower.startsWith(prefix + searchLower) || 
+            searchLower.startsWith(prefix + wordLower)
+          );
+        });
+        
+        // Merge and deduplicate
+        const allAntonyms = [...antonyms, ...moreAntonyms];
+        antonyms = allAntonyms.filter((item, index, self) => 
+          index === self.findIndex(t => t.word === item.word)
+        ).slice(0, 15); // Limit to 15 total
+      }
       
       setSynonymResults({ synonyms, antonyms });
     } catch (error) {
@@ -257,15 +299,33 @@ const LyricsSearchApp = () => {
   }, [songs]);
 
   // Highlight search terms in text
-  const highlightText = (text, query) => {
+  const highlightText = (text, query, isExactMatch = false) => {
     if (!query) return text;
     
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    const parts = text.split(regex);
+    // Sanitize input to prevent XSS
+    const sanitizedText = DOMPurify.sanitize(text);
+    let sanitizedQuery = DOMPurify.sanitize(query);
+    
+    // Remove quotes if present for highlighting
+    if (sanitizedQuery.startsWith('"') && sanitizedQuery.endsWith('"')) {
+      sanitizedQuery = sanitizedQuery.slice(1, -1);
+    }
+    
+    // Create regex based on exact match or not
+    const regexPattern = isExactMatch 
+      ? `\\b(${sanitizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`
+      : `(${sanitizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`;
+      
+    const regex = new RegExp(regexPattern, 'gi');
+    const parts = sanitizedText.split(regex);
     
     return parts.map((part, index) => 
       regex.test(part) ? (
-        <span key={index} className="bg-yellow-200 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100 px-1 rounded">
+        <span key={index} className={`px-1 rounded ${
+          isExactMatch 
+            ? 'bg-green-200 dark:bg-green-600 text-green-900 dark:text-green-100' 
+            : 'bg-yellow-200 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100'
+        }`}>
           {part}
         </span>
       ) : part
@@ -289,8 +349,8 @@ const LyricsSearchApp = () => {
       {/* Header */}
       <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-50 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between mb-4 mobile-header">
+            <div className="flex items-center gap-4 mobile-title">
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className={`p-2 rounded-lg transition-colors ${
@@ -303,12 +363,12 @@ const LyricsSearchApp = () => {
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <h1 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Lyrics Search
+                Lyrical-Toolkit
               </h1>
             </div>
             
             <div className="flex gap-2 tab-container">
-              {['search', 'definitions', 'synonyms', 'rhymes', 'upload', 'stats'].map((tab) => {
+              {['definitions', 'synonyms', 'rhymes','search', 'upload', 'stats'].map((tab) => {
                 const icons = {
                   search: Search,
                   definitions: Book,
@@ -326,10 +386,10 @@ const LyricsSearchApp = () => {
                     className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize tab-button ${
                       activeTab === tab 
                         ? darkMode 
-                          ? 'bg-gray-600 text-white'  // Changed from bg-gray-700
+                          ? 'bg-black text-white'  // Changed to black
                           : 'bg-gray-900 text-white'
                         : darkMode
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'  // Added hover:text-white
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -344,7 +404,7 @@ const LyricsSearchApp = () => {
       {/* Universal Search Bar - Show for all tabs except upload and stats */}
       {!['upload', 'stats'].includes(activeTab) && (
         <>
-          <div className="relative">
+          <div className="relative mobile-search">
             {/* Dynamic icon based on active tab */}
             {activeTab === 'search' && <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
             {activeTab === 'definitions' && <Book className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-400'} w-5 h-5`} />}
@@ -354,7 +414,7 @@ const LyricsSearchApp = () => {
             <input
               type="text"
               placeholder={
-                activeTab === 'search' ? "Search your lyrics..." :
+                activeTab === 'search' ? 'Search your lyrics... (use "quotes" for exact words)' :
                 activeTab === 'definitions' ? "Enter a word to get its definition..." :
                 activeTab === 'synonyms' ? "Find synonyms and antonyms..." :
                 activeTab === 'rhymes' ? "Find words that rhyme..." : ""
@@ -440,7 +500,7 @@ const LyricsSearchApp = () => {
       
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 mobile-content">
         {/* Search Tab */}
         {activeTab === 'search' && (
           <div>
@@ -480,7 +540,7 @@ const LyricsSearchApp = () => {
                             }`}
                           >
                             {contextLine === result.matchingLine ? (
-                              highlightText(contextLine, searchQuery || highlightWord)
+                              highlightText(contextLine, searchQuery || highlightWord, result.isExactMatch)
                             ) : (
                               contextLine
                             )}
@@ -606,7 +666,7 @@ const LyricsSearchApp = () => {
             )}
 
             {synonymResults && (
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 mobile-grid">
                 <div className={`rounded-lg border p-6 transition-colors ${
                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                 }`}>
