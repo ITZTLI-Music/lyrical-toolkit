@@ -389,6 +389,83 @@ input:focus {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
+/* Add these new styles to your src/index.css */
+
+/* Common styling for all highlighted rhyme words */
+.rhyme-word-highlight {
+  font-weight: 600; /* semibold */
+  border-radius: 0.25rem; /* rounded */
+  padding: 1px 4px; /* similar to px-1 py-0.5 */
+  margin: 0 1px; /* A little space around highlighted words */
+}
+
+/* Light Mode Colors */
+.rhyme-group-a { background-color: #fecaca; /* Light Red */ color: #b91c1c; /* Dark Red Text */ }
+.rhyme-group-b { background-color: #bfdbfe; /* Light Blue */ color: #1d4ed8; /* Dark Blue Text */ }
+.rhyme-group-c { background-color: #bbf7d0; /* Light Green */ color: #15803d; /* Dark Green Text */ }
+.rhyme-group-d { background-color: #fef08a; /* Light Yellow */ color: #a16207; /* Dark Yellow Text */ }
+.rhyme-group-e { background-color: #e9d5ff; /* Light Purple */ color: #7e22ce; /* Dark Purple Text */ }
+.rhyme-group-f { background-color: #fbcfe8; /* Light Pink */ color: #be185d; /* Dark Pink Text */ }
+.rhyme-group-g { background-color: #c7d2fe; /* Light Indigo */ color: #4338ca; /* Dark Indigo Text */ }
+.rhyme-group-h { background-color: #99f6e4; /* Light Teal */ color: #0f766e; /* Dark Teal Text */ }
+.rhyme-group-i { background-color: #fed7aa; /* Light Orange */ color: #c2410c; /* Dark Orange Text */ }
+.rhyme-group-j { background-color: #a5f3fc; /* Light Cyan */ color: #0e7490; /* Dark Cyan Text */ }
+.rhyme-group-k { background-color: #d9f99d; /* Light Lime */ color: #65a30d; /* Dark Lime Text */ }
+.rhyme-group-l { background-color: #a7f3d0; /* Light Emerald */ color: #059669; /* Dark Emerald Text */ }
+.rhyme-group-default { background-color: #e5e7eb; /* Light Gray */ color: #374151; /* Dark Gray Text */ }
+
+
+/* Dark Mode Colors */
+
+.dark .rhyme-group-a { background-color: #7f1d1d; /* Darker Red */ color: #fecaca; /* Lighter Red Text */ }
+.dark .rhyme-group-b { background-color: #1e3a8a; /* Darker Blue */ color: #bfdbfe; /* Lighter Blue Text */ }
+.dark .rhyme-group-c { background-color: #14532d; /* Darker Green */ color: #bbf7d0; /* Lighter Green Text */ }
+.dark .rhyme-group-d { background-color: #713f12; /* Darker Yellow */ color: #fef08a; /* Lighter Yellow Text */ }
+.dark .rhyme-group-e { background-color: #581c87; /* Darker Purple */ color: #e9d5ff; /* Lighter Purple Text */ }
+.dark .rhyme-group-f { background-color: #831843; /* Darker Pink */ color: #fbcfe8; /* Lighter Pink Text */ }
+.dark .rhyme-group-g { background-color: #312e81; /* Darker Indigo */ color: #c7d2fe; /* Lighter Indigo Text */ }
+.dark .rhyme-group-h { background-color: #0f766e; /* Darker Teal */ color: #99f6e4; /* Lighter Teal Text */ }
+.dark .rhyme-group-i { background-color: #7c2d12; /* Darker Orange */ color: #fed7aa; /* Lighter Orange Text */ }
+.dark .rhyme-group-j { background-color: #0e7490; /* Darker Cyan */ color: #a5f3fc; /* Lighter Cyan Text */ }
+.dark .rhyme-group-k { background-color: #3f6212; /* Darker Lime */ color: #d9f99d; /* Lighter Lime Text */ }
+.dark .rhyme-group-l { background-color: #047857; /* Darker Emerald */ color: #a7f3d0; /* Lighter Emerald Text */ }
+.dark .rhyme-group-default { background-color: #4b5563; /* Darker Gray */ color: #e5e7eb; /* Lighter Gray Text */ }
+
+/* === Add these new styles to your src/index.css === */
+/* Make sure they are alongside your existing .rhyme-group-a to .rhyme-group-l styles */
+
+/* Light Mode Colors */
+.rhyme-group-m { background-color: #bae6fd; /* Light Sky */ color: #0c4a6e; /* Dark Sky Text */ }
+.rhyme-group-n { background-color: #fde68a; /* Light Amber */ color: #78350f; /* Dark Amber Text */ }
+.rhyme-group-o { background-color: #ddd6fe; /* Light Violet */ color: #5b21b6; /* Dark Violet Text */ }
+.rhyme-group-p { background-color: #fecdd3; /* Light Rose */ color: #9f1239; /* Dark Rose Text */ }
+.rhyme-group-q { background-color: #d6d3d1; /* Light Stone */ color: #44403c; /* Dark Stone Text */ }
+.rhyme-group-r { background-color: #f5d0fe; /* Light Fuchsia */ color: #701a75; /* Dark Fuchsia Text */ }
+.rhyme-group-s { background-color: #d1d5db; /* Light Slate (similar to gray but distinct) */ color: #374151; /* Dark Slate Text */ }
+.rhyme-group-t { background-color: #cffafe; /* Lighter Cyan */ color: #0e7490; /* Dark Cyan Text - same as J but different bg */ }
+.rhyme-group-u { background-color: #ffedd5; /* Lighter Orange */ color: #9a3412; /* Dark Orange Text - same as I but different bg */ }
+.rhyme-group-v { background-color: #d1fae5; /* Lighter Emerald */ color: #047857; /* Dark Emerald Text - same as L but different bg */ }
+.rhyme-group-w { background-color: #ecfccb; /* Lighter Lime */ color: #4d7c0f; /* Dark Lime Text - same as K but different bg */ }
+.rhyme-group-x { background-color: #f3e8ff; /* Lighter Purple */ color: #6b21a8; /* Dark Purple Text - same as E but different bg */ }
+.rhyme-group-y { background-color: #dbeafe; /* Lighter Blue */ color: #1e3a8a; /* Dark Blue Text - same as B but different bg */ }
+.rhyme-group-z { background-color: #dcfce7; /* Lighter Green */ color: #166534; /* Dark Green Text - same as C but different bg */ }
+
+/* Dark Mode Colors */
+.dark .rhyme-group-m { background-color: #0369a1; /* Darker Sky */ color: #bae6fd; /* Lighter Sky Text */ }
+.dark .rhyme-group-n { background-color: #78350f; /* Darker Amber */ color: #fde68a; /* Lighter Amber Text */ }
+.dark .rhyme-group-o { background-color: #4c1d95; /* Darker Violet */ color: #ddd6fe; /* Lighter Violet Text */ }
+.dark .rhyme-group-p { background-color: #831843; /* Darker Rose */ color: #fecdd3; /* Lighter Rose Text */ }
+.dark .rhyme-group-q { background-color: #57534e; /* Darker Stone */ color: #d6d3d1; /* Lighter Stone Text */ }
+.dark .rhyme-group-r { background-color: #701a75; /* Darker Fuchsia */ color: #f5d0fe; /* Lighter Fuchsia Text */ }
+.dark .rhyme-group-s { background-color: #475569; /* Darker Slate */ color: #d1d5db; /* Lighter Slate Text */ }
+.dark .rhyme-group-t { background-color: #155e75; color: #cffafe; }
+.dark .rhyme-group-u { background-color: #7c2d12; color: #ffedd5; }
+.dark .rhyme-group-v { background-color: #065f46; color: #d1fae5; }
+.dark .rhyme-group-w { background-color: #3f6212; color: #ecfccb; }
+.dark .rhyme-group-x { background-color: #581c87; color: #f3e8ff; }
+.dark .rhyme-group-y { background-color: #1e3a8a; color: #dbeafe; }
+.dark .rhyme-group-z { background-color: #15803d; color: #dcfce7; }
+
 /* Mobile responsive fixes */
 @media (max-width: 768px) {
   .tab-container {
@@ -401,6 +478,11 @@ input:focus {
     font-size: 0.75rem !important;
     padding: 0.5rem 0.75rem !important;
     min-width: fit-content !important;
+  }
+  
+  /* Remove any background color overrides that might interfere */
+  .tab-button:not(.active-tab) {
+    /* Let React handle the colors, don't override here */
   }
   
   /* Make header stack vertically on mobile */
