@@ -139,8 +139,6 @@ const LyricsSearchApp = () => {
     handleFileUpload(files);
   };
 
-  const apiRhymeIdentifierCache = useMemo(() => new Map(), []); // Cache for API responses
-
   // Enhanced search functionality - group by verse/paragraph
   const searchResults = useMemo(() => {
     const query = searchQuery || highlightWord;
