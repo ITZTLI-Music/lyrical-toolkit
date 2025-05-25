@@ -3,41 +3,6 @@ import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle,
 import DOMPurify from 'dompurify';
 import { songVocabularyPhoneticMap } from './songVocabularyPhoneticMap';
 
-// Helper function for rhyme scheme colors - provides background and contrasting text
-const getSchemeColor = (letter, darkMode) => {
-  const colors = {
-    // Original A-L
-    A: darkMode ? 'bg-red-700 text-red-100' : 'bg-red-200 text-red-800',
-    B: darkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-200 text-blue-800',
-    C: darkMode ? 'bg-green-700 text-green-100' : 'bg-green-200 text-green-800',
-    D: darkMode ? 'bg-yellow-600 text-yellow-100' : 'bg-yellow-200 text-yellow-800',
-    E: darkMode ? 'bg-purple-700 text-purple-100' : 'bg-purple-200 text-purple-800',
-    F: darkMode ? 'bg-pink-700 text-pink-100' : 'bg-pink-200 text-pink-800',
-    G: darkMode ? 'bg-indigo-700 text-indigo-100' : 'bg-indigo-200 text-indigo-800',
-    H: darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-200 text-teal-800',
-    I: darkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-200 text-orange-800',
-    J: darkMode ? 'bg-cyan-700 text-cyan-100' : 'bg-cyan-200 text-cyan-800',
-    K: darkMode ? 'bg-lime-600 text-lime-100' : 'bg-lime-200 text-lime-800',
-    L: darkMode ? 'bg-emerald-700 text-emerald-100' : 'bg-emerald-200 text-emerald-800',
-    // New M-Z (example colors, feel free to adjust)
-    M: darkMode ? 'bg-rose-700 text-rose-100' : 'bg-rose-200 text-rose-800',
-    N: darkMode ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-fuchsia-200 text-fuchsia-800',
-    O: darkMode ? 'bg-violet-700 text-violet-100' : 'bg-violet-200 text-violet-800',
-    P: darkMode ? 'bg-sky-700 text-sky-100' : 'bg-sky-200 text-sky-800',
-    Q: darkMode ? 'bg-amber-600 text-amber-100' : 'bg-amber-200 text-amber-800',
-    R: darkMode ? 'bg-stone-600 text-stone-100' : 'bg-stone-300 text-stone-800',
-    S: darkMode ? 'bg-neutral-600 text-neutral-100' : 'bg-neutral-300 text-neutral-800',
-    T: darkMode ? 'bg-zinc-600 text-zinc-100' : 'bg-zinc-300 text-zinc-800',
-    U: darkMode ? 'bg-red-600 text-red-50' : 'bg-red-300 text-red-900', // Slightly different shade of red
-    V: darkMode ? 'bg-blue-600 text-blue-50' : 'bg-blue-300 text-blue-900',
-    W: darkMode ? 'bg-green-600 text-green-50' : 'bg-green-300 text-green-900',
-    X: darkMode ? 'bg-purple-600 text-purple-50' : 'bg-purple-300 text-purple-900',
-    Y: darkMode ? 'bg-pink-600 text-pink-50' : 'bg-pink-300 text-pink-900',
-    Z: darkMode ? 'bg-teal-600 text-teal-50' : 'bg-teal-300 text-teal-900',
-  };
-  return colors[letter] || (darkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-400 text-gray-900'); // Modified default for visibility
-};
-
 // Add this Set near the top of your App.js, outside the component
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -175,51 +140,6 @@ const LyricsSearchApp = () => {
   };
 
   const apiRhymeIdentifierCache = useMemo(() => new Map(), []); // Cache for API responses
-
-  // NEW function to get a rhyme identifier from the API
-  const getApiRhymeIdentifier = async (word) => {
-    const cleanWord = word.trim().toLowerCase().replace(/[^\w\s'-]|('s\b)|(^\s*')|('\s*$)/g, '').replace(/\s+/g, ' ');
-
-    if (!cleanWord || cleanWord.length < 2 || STOP_WORDS.has(cleanWord)) {
-      return null; // Ignore short words and stop words
-    }
-
-    if (apiRhymeIdentifierCache.has(cleanWord)) {
-      return apiRhymeIdentifierCache.get(cleanWord);
-    }
-
-    try {
-      // Fetch perfect rhymes (rel_rhy) and near rhymes (rel_nry)
-      // Near rhymes often cover "sounds like" in a poetic context better than sl=
-      const response = await fetch(`https://api.datamuse.com/words?max=10&rel_rhy=${encodeURIComponent(cleanWord)}&rel_nry=${encodeURIComponent(cleanWord)}`);
-      
-      let identifier = cleanWord; // Default to the word itself
-
-      if (response.ok) {
-        const rhymes = await response.json();
-        let rhymeCluster = [cleanWord]; // Start cluster with the word itself
-
-        if (rhymes.length > 0) {
-          rhymes.forEach(r => {
-            if (r.word) {
-              rhymeCluster.push(r.word.toLowerCase());
-            }
-          });
-        }
-        
-        rhymeCluster = [...new Set(rhymeCluster)]; // Deduplicate
-        rhymeCluster.sort(); // Sort alphabetically
-        identifier = rhymeCluster[0]; // Choose the first as the canonical identifier for this group
-      }
-      
-      apiRhymeIdentifierCache.set(cleanWord, identifier);
-      return identifier;
-    } catch (error) {
-      console.error(`Error fetching API rhyme identifier for ${cleanWord}:`, error);
-      apiRhymeIdentifierCache.set(cleanWord, cleanWord); // Fallback to self on error
-      return cleanWord; 
-    }
-  };
 
   // Enhanced search functionality - group by verse/paragraph
   const searchResults = useMemo(() => {
@@ -406,34 +326,6 @@ const LyricsSearchApp = () => {
     }
     setRhymeLoading(false);
   };
-
-  const getRhymeKey = (word) => {
-      if (!word || typeof word !== 'string') {
-        return null;
-      }
-      
-      // Remove punctuation, convert to lowercase. Also remove possessive 's or trailing '
-      // and leading ' if they are part of what might be a contraction remnant.
-      const cleanWord = word.trim().toLowerCase().replace(/[^\w\s'-]|('s\b)|(^\s*')|('\s*$)/g, '').replace(/\s+/g, ' ');
-
-      if (!cleanWord || cleanWord.length < 2) { // Minimum length for any processing
-          return null;
-      }
-
-      // Check if the cleaned word is a stop word
-      if (STOP_WORDS.has(cleanWord)) {
-          // console.log(`Word "${cleanWord}" (from "${word}") is a stop word. Skipping rhyme key.`);
-          return null; // Stop words don't get rhyme keys
-      }
-
-      // For non-stop words:
-      // If the word is short (e.g., 3 letters like "cat", "hat"), use the whole word as the key.
-      // For longer words, use the suffix.
-      if (cleanWord.length <= 3) { 
-        return cleanWord;
-      }
-      return cleanWord.slice(-3); // Using last 3 characters for longer words
-    };
 
   // Analyzes rhymes based on API-derived rhyme identifiers
   // In App.js, after your imports:
