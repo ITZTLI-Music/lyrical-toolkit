@@ -125,7 +125,7 @@ const LyricsSearchApp = () => {
     if (songs.length === 0) {
       setTimeout(loadExampleSong, 100);
     }
-  }, [songs.length, exampleSongDeleted]); // Add exampleSongDeleted as dependency
+  }, [songs.length, exampleSongDeleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load manual content
   const loadManual = async () => {
