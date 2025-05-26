@@ -1,0 +1,62 @@
+GETTING STARTED
+Upload your .txt files using the Upload tab. Drag and drop files or click "Choose Files" to browse. The app supports multiple files at once and stores everything locally in your browser.
+_______________
+SEARCH TAB
+- Type any word or phrase to find where it appears in your lyrics
+- Use quotation marks for exact matches: "the way" vs the way
+- Click words in search results to view the full song
+- Recent searches are saved for quick access
+- Search results show verse context and match counts
+_______________
+DICTIONARY TAB
+- Enter any word to get definitions, pronunciations, and parts of speech
+- Click "Search in lyrics" on definition results to find that word in your songs
+- Useful for exploring word meanings and finding better word choices
+_______________
+SYNONYMS TAB
+- Find synonyms and antonyms for any word
+- Click any suggested word to search for rhymes or get its definition
+- Helps expand vocabulary and find alternative word choices
+_______________
+RHYMES TAB
+- Perfect Rhymes: Words that rhyme exactly
+- Near Rhymes: Words with similar sounds (slant rhymes)
+- Sounds Like: Words with similar pronunciation
+- Click any rhyme suggestion to get its definition
+- Great for finding rhyming words when writing
+_______________
+ANALYSIS TAB
+Generate Reports:
+- Rhyming Dictionary: Creates rhyme groups from your lyrics
+- Word Frequency: Shows your most-used words with statistics
+- Quick Stats: Overview of your song collection
+_______________
+Analyze Individual Songs:
+- Rhyme Scheme: Highlights rhyming words with color coding
+- Syllables: Counts syllables per line and shows patterns
+_______________
+UPLOAD TAB
+- Manage your song collection
+- View word counts and upload dates
+- Delete individual songs or clear entire collection
+- Click "View" to see full lyrics with current highlighting
+_______________
+STATS TAB
+- Total songs, words, and unique words in your collection
+- Most frequently used words across all lyrics
+- Click any word to search for it in your lyrics
+_______________
+TIPS
+- Use exact search ("quotes") to find specific phrases
+- The app remembers your searches and settings
+- All data stays in your browser - nothing is sent to servers
+- Try the rhyme scheme analysis to see your natural patterns
+- Word frequency shows your writing habits and style tendencies
+_______________
+EXAMPLE USAGE
+1. Upload some lyrics files
+2. Search for a common word like "love" to see how often you use it
+3. Try the rhyme scheme analysis on a song to see patterns visually
+4. Use the dictionary to explore words you use frequently
+5. Find rhymes for words you want to use in new songs
+_______________

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle, Music } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle, Music, Trash2 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { songVocabularyPhoneticMap } from './songVocabularyPhoneticMap';
 
@@ -49,6 +49,102 @@ const LyricsSearchApp = () => {
   const [analysisType, setAnalysisType] = useState(null);
   const [selectedSongForAnalysis, setSelectedSongForAnalysis] = useState(null);
 
+  // Manual states
+  const [showManual, setShowManual] = useState(false);
+  const [manualContent, setManualContent] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
+
+  // Load example song and manual
+  const loadingExampleRef = useRef(false);
+  
+  useEffect(() => {
+    const loadExampleSong = async () => {
+      console.log('loadExampleSong function called');
+      
+      // Prevent concurrent loading
+      if (loadingExampleRef.current) {
+        console.log('Already loading example song, skipping');
+        return;
+      }
+      
+      // Check if example song already exists in current songs
+      const exampleExists = songs.some(song => song.isExample);
+      console.log('Example song exists in current songs:', exampleExists);
+      
+      if (exampleExists) {
+        console.log('Example song already exists, skipping load');
+        return;
+      }
+      
+      // Set loading flag
+      loadingExampleRef.current = true;
+      
+      // If no example song exists, clear the session flag and load it
+      console.log('No example song found, clearing session flag and loading');
+      sessionStorage.removeItem('exampleSongLoaded');
+
+      try {
+        console.log('Attempting to fetch example song...');
+        const response = await fetch('/HUMAN.txt');
+        console.log('Response:', response.status, response.ok);
+        if (response.ok) {
+          const content = await response.text();
+          const exampleSong = {
+            id: 'example-song-' + Date.now(),
+            title: 'HUMAN',
+            lyrics: DOMPurify.sanitize(content),
+            wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
+            dateAdded: new Date().toISOString(),
+            filename: 'HUMAN.txt',
+            isExample: true
+          };
+          
+          console.log('Adding example song to state');
+          setSongs(prev => [exampleSong, ...prev]);
+          sessionStorage.setItem('exampleSongLoaded', 'true');
+          
+          // Clear any previous search states for fresh start
+          setSearchQuery('');
+          setHighlightWord('');
+          setDefinitionQuery('');
+          setDefinitionResults(null);
+          setSynonymQuery('');
+          setSynonymResults(null);
+          setRhymeQuery('');
+          setRhymeResults(null);
+        }
+      } catch (error) {
+        console.error('Failed to load example song:', error);
+      } finally {
+        // Clear loading flag
+        loadingExampleRef.current = false;
+      }
+    };
+
+    // Small delay to ensure localStorage has been loaded first
+    setTimeout(loadExampleSong, 100);
+  }, [songs.length]); // Depend on songs.length so it runs after localStorage loads
+
+  // Load manual content
+  const loadManual = async () => {
+    if (manualContent) return; // Already loaded
+    
+    setManualLoading(true);
+    try {
+      const response = await fetch('/MANUAL.txt');
+      if (response.ok) {
+        const content = await response.text();
+        setManualContent(content);
+      } else {
+        setManualContent('Manual content could not be loaded.');
+      }
+    } catch (error) {
+      console.error('Failed to load manual:', error);
+      setManualContent('Error loading manual content.');
+    }
+    setManualLoading(false);
+  };
+
   // Load data from localStorage on mount
   useEffect(() => {
     const savedSongs = localStorage.getItem('lyricsSearchSongs');
@@ -57,7 +153,10 @@ const LyricsSearchApp = () => {
     const savedHighlight = localStorage.getItem('lyricsSearchHighlight');
     
     if (savedSongs) {
-      setSongs(JSON.parse(savedSongs));
+      const parsedSongs = JSON.parse(savedSongs);
+      // Only load non-example songs from localStorage
+      const nonExampleSongs = parsedSongs.filter(song => !song.isExample);
+      setSongs(nonExampleSongs);
     }
     if (savedHistory) {
       setSearchHistory(JSON.parse(savedHistory));
@@ -77,7 +176,9 @@ const LyricsSearchApp = () => {
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    localStorage.setItem('lyricsSearchSongs', JSON.stringify(songs));
+    // Only save non-example songs to localStorage
+    const songsToSave = songs.filter(song => !song.isExample);
+    localStorage.setItem('lyricsSearchSongs', JSON.stringify(songsToSave));
   }, [songs]);
 
   useEffect(() => {
@@ -228,6 +329,23 @@ const LyricsSearchApp = () => {
     if (query.trim()) {
       addToSearchHistory(query);
       setHighlightWord(query);
+    }
+  };
+
+  // Delete individual song
+  const deleteSong = (songId) => {
+    if (window.confirm('Are you sure you want to delete this song?')) {
+      setSongs(prev => prev.filter(song => song.id !== songId));
+    }
+  };
+
+  // Delete all songs
+  const deleteAllSongs = () => {
+    if (window.confirm('Are you sure you want to delete ALL songs? This cannot be undone.')) {
+      setSongs([]);
+      setSearchQuery('');
+      setHighlightWord('');
+      setSearchHistory([]);
     }
   };
 
@@ -462,7 +580,7 @@ const LyricsSearchApp = () => {
     const clusters = performHierarchicalClustering(allRhymableWords, similarityMatrix, 77);
 
     // Step 6: Post-process clusters to merge very similar ones
-    const consolidatedClusters = consolidateSimilarClusters(clusters, 92);
+    const consolidatedClusters = consolidateSimilarClusters(clusters, 95);
 
     // Step 7: Sort clusters by strength and size
     consolidatedClusters.sort((a, b) => {
@@ -603,14 +721,20 @@ const LyricsSearchApp = () => {
           );
           
           if (similarity >= threshold) {
-            // Merge clusters
-            consolidated[i] = {
-              words: [...consolidated[i].words, ...consolidated[j].words],
-              indices: [...consolidated[i].indices, ...consolidated[j].indices],
-              centroid: consolidated[i].centroid
-            };
-            consolidated.splice(j, 1);
-            changed = true;
+            // Check if clusters have compatible ending patterns before merging
+            const pattern1 = getEndingPattern(consolidated[i].centroid);
+            const pattern2 = getEndingPattern(consolidated[j].centroid);
+            
+            if (areCompatiblePatterns(pattern1, pattern2)) {
+              // Merge clusters
+              consolidated[i] = {
+                words: [...consolidated[i].words, ...consolidated[j].words],
+                indices: [...consolidated[i].indices, ...consolidated[j].indices],
+                centroid: consolidated[i].centroid
+              };
+              consolidated.splice(j, 1);
+              changed = true;
+            }
           }
         }
       }
@@ -697,6 +821,37 @@ const LyricsSearchApp = () => {
       console.error('Error analyzing meter:', error);
       return [];
     }
+  };
+
+  // Extract the ending pattern from phonetic data
+  const getEndingPattern = (rhymeData) => {
+    if (!rhymeData || !rhymeData.fullPhonetic) return null;
+    
+    const phonemes = rhymeData.fullPhonetic.split(' ');
+    // Get last 2-3 phonemes as the "ending pattern"
+    return phonemes.slice(-3).join(' ');
+  };
+
+  // Check if two ending patterns are compatible for rhyming
+  const areCompatiblePatterns = (pattern1, pattern2) => {
+    if (!pattern1 || !pattern2) return false;
+    
+    // Split patterns into individual phonemes
+    const phonemes1 = pattern1.split(' ');
+    const phonemes2 = pattern2.split(' ');
+    
+    // They should share at least the last phoneme (final sound)
+    const lastPhoneme1 = phonemes1[phonemes1.length - 1];
+    const lastPhoneme2 = phonemes2[phonemes2.length - 1];
+    
+    // Basic compatibility check - must share final sound or very similar
+    if (lastPhoneme1 === lastPhoneme2) return true;
+    
+    // Check for similar ending patterns (like different stress versions)
+    const base1 = lastPhoneme1.replace(/[012]$/, '');
+    const base2 = lastPhoneme2.replace(/[012]$/, '');
+    
+    return base1 === base2;
   };
 
   // Generate rhyming dictionary from user's lyrics
@@ -1151,7 +1306,7 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
       {/* Header */}
       <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-50 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4 mobile-header">
+          <div className="flex items-center justify-between mb-2 mobile-header">
             <div className="flex items-center gap-4 mobile-title">
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -1169,47 +1324,72 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
               </h1>
             </div>
             
-            <div className="flex gap-2 tab-container">
-              {['dictionary', 'synonyms', 'rhymes','search', 'analysis', 'upload', 'stats'].map((tab) => {
-                const icons = {
-                  search: Search,
-                  dictionary: Book,
-                  synonyms: Shuffle,
-                  rhymes: Music,
-                  analysis: BarChart3,
-                  upload: Upload,
-                  stats: BarChart3
-                };
-                const Icon = icons[tab];
-                
-                // Capitalize first letter for display
-                const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2 tab-container">
+                {['dictionary', 'synonyms', 'rhymes','search', 'analysis', 'upload', 'stats'].map((tab) => {
+                  const icons = {
+                    search: Search,
+                    dictionary: Book,
+                    synonyms: Shuffle,
+                    rhymes: Music,
+                    analysis: BarChart3,
+                    upload: Upload,
+                    stats: BarChart3
+                  };
+                  const Icon = icons[tab];
+                  
+                  // Capitalize first letter for display
+                  const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
 
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors tab-button ${
-                      activeTab === tab 
-                        ? darkMode 
-                          ? 'bg-black text-white'  // Keep black for dark mode selected
-                          : 'bg-gray-900 text-white'  // Keep dark for light mode selected
-                        : darkMode
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 inline mr-2" />
-                    {displayName}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setShowManual(false); // Close manual when switching tabs
+                      }}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors tab-button ${
+                        activeTab === tab && !showManual
+                          ? darkMode 
+                            ? 'bg-black text-white'  // Keep black for dark mode selected
+                            : 'bg-gray-900 text-white'  // Keep dark for light mode selected
+                          : darkMode
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 inline mr-2" />
+                      {displayName}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => {
+                  setShowManual(!showManual);
+                  if (!showManual) {
+                    loadManual();
+                  }
+                }}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  showManual
+                    ? darkMode 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-blue-600 text-white'
+                    : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Book className="w-4 h-4 inline mr-2" />
+                {showManual ? 'Hide Manual' : 'Show Manual'}
+              </button>
             </div>
           </div>
 
-
       {/* Universal Search Bar - Show for all tabs except upload and stats */}
-      {!['upload', 'stats'].includes(activeTab) && (
+      {!['upload', 'stats', 'analysis'].includes(activeTab) && !showManual && (
         <>
           <div className="relative mobile-search">
             {/* Dynamic icon based on active tab */}
@@ -1247,41 +1427,43 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
                   else if (activeTab === 'rhymes') searchRhymes(rhymeQuery);
                 }
               }}
-              className={`w-full pl-10 pr-24 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${
-                darkMode 
-                  ? 'bg-gray-700 border-gray-600 text-black placeholder-gray-400' 
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors ${                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
               }`}
             />
             
-            {/* Dynamic search button - only show for tabs that need it */}
+            </div>
+
+            {/* Dynamic search button - below search bar */}
             {activeTab !== 'search' && activeTab !== 'analysis' && (
-              <button
-                onClick={() => {
-                  if (activeTab === 'dictionary') searchDefinition(definitionQuery);
-                  else if (activeTab === 'synonyms') searchSynonyms(synonymQuery);
-                  else if (activeTab === 'rhymes') searchRhymes(rhymeQuery);
-                }}
-                disabled={
-                  (activeTab === 'dictionary' && definitionLoading) ||
-                  (activeTab === 'synonyms' && synonymLoading) ||
-                  (activeTab === 'rhymes' && rhymeLoading)
-                }
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
-                    : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
-                }`}
-              >
-                {(activeTab === 'dictionary' && definitionLoading) || 
-                (activeTab === 'synonyms' && synonymLoading) || 
-                (activeTab === 'rhymes' && rhymeLoading) ? '...' : 
-                activeTab === 'dictionary' ? 'Define' :
-                activeTab === 'synonyms' ? 'Search' :
-                activeTab === 'rhymes' ? 'Find Rhymes' : 'Search'}
-              </button>
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={() => {
+                    if (activeTab === 'dictionary') searchDefinition(definitionQuery);
+                    else if (activeTab === 'synonyms') searchSynonyms(synonymQuery);
+                    else if (activeTab === 'rhymes') searchRhymes(rhymeQuery);
+                  }}
+                  disabled={
+                    (activeTab === 'dictionary' && definitionLoading) ||
+                    (activeTab === 'synonyms' && synonymLoading) ||
+                    (activeTab === 'rhymes' && rhymeLoading)
+                  }
+                  className={`px-6 py-2 rounded-lg transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
+                      : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
+                  }`}
+                >
+                  {(activeTab === 'dictionary' && definitionLoading) || 
+                  (activeTab === 'synonyms' && synonymLoading) || 
+                  (activeTab === 'rhymes' && rhymeLoading) ? '...' : 
+                  activeTab === 'dictionary' ? 'Define' :
+                  activeTab === 'synonyms' ? 'Search' :
+                  activeTab === 'rhymes' ? 'Find Rhymes' : 'Search'}
+                </button>
+              </div>
             )}
-          </div>
           
           {/* Search History - only show for main search tab */}
           {activeTab === 'search' && searchHistory.length > 0 && (
@@ -1310,823 +1492,911 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 py-6 mobile-content">
-        {/* Search Tab */}
-        {activeTab === 'search' && (
-          <div>
-            {(searchQuery || highlightWord) ? (
-              <div>
-                <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Found {searchResults.reduce((total, result) => total + result.matchCount, 0)} matches 
-                  in {searchResults.length} verse{searchResults.length !== 1 ? 's' : ''} 
-                  for "{searchQuery || highlightWord}"
-                  {highlightWord && !searchQuery && (
-                    <span className={`ml-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                      (highlighted from other tabs)
-                    </span>
-                  )}
-                </div>
-                
-                <div className="space-y-4">
-                  {searchResults.map((result, index) => (
-                    <div key={index} className={`rounded-lg border p-4 transition-colors ${
-                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                    }`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {result.songTitle}
-                        </h3>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {result.matchCount} match{result.matchCount !== 1 ? 'es' : ''}
-                          </span>
-                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Verse {result.verseIndex} • Line {result.lineNumber}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className={`text-sm leading-relaxed whitespace-pre-line ${
-                        darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>
-                        {highlightText(result.verseContent, searchQuery || highlightWord, result.isExactMatch)}
-                      </div>
-                      
-                      <button
-                        onClick={() => setSelectedSong(songs.find(s => s.id === result.songId))}
-                        className={`mt-3 text-xs underline transition-colors ${
-                          darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                      >
-                        View full song
-                      </button>
-                    </div>
-                  ))}
-                </div>
+        {/* Manual Content */}
+        {showManual && (
+          <div className={`rounded-lg border p-6 mb-6 transition-colors ${
+            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                User Manual
+              </h2>
+              <button
+                onClick={() => setShowManual(false)}
+                className={`transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {manualLoading ? (
+              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Loading manual...
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Search className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
-                <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Start searching your lyrics
-                </h3>
-                <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Enter any word or phrase to find where you've used it before
-                </p>
-                
-                {songs.length > 0 && (
-                  <div className={`rounded-lg border p-4 max-w-md mx-auto transition-colors ${
-                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                  }`}>
-                    <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <div>{stats.totalSongs} songs loaded</div>
-                      <div>{stats.totalWords.toLocaleString()} total words</div>
-                      <div>{stats.uniqueWords.toLocaleString()} unique words</div>
-                    </div>
-                  </div>
-                )}
+              <div className={`whitespace-pre-line leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {manualContent.split('\n').map((line, index) => {
+                  // Make section headers bold (lines that are all caps or start with caps and don't have lowercase)
+                  const isHeader = line.match(/^[A-Z][A-Z\s\-]*$/) && line.trim().length > 0;
+                  const isSubHeader = line.match(/^[A-Z][a-z\s]*:$/) && line.trim().length > 0;
+                  
+                  if (isHeader) {
+                    return (
+                      <div key={index} className={`font-bold text-lg mt-6 mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {line}
+                      </div>
+                    );
+                  } else if (isSubHeader) {
+                    return (
+                      <div key={index} className={`font-semibold mt-4 mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        {line}
+                      </div>
+                    );
+                  } else {
+                    return <div key={index}>{line}</div>;
+                  }
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* Dictionary Tab */}
-        {activeTab === 'dictionary' && (
-          <div>
-            {definitionLoading && (
-            <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Looking up definition...
-            </div>
-          )}
-
-          {definitionResults && (
-            <div className="space-y-4">
-              {definitionResults.length > 0 ? (
-                definitionResults.map((entry, entryIndex) => (
-                  <div key={entryIndex} className={`rounded-lg border p-6 transition-colors ${
-                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                  }`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {entry.word}
-                      </h2>
-                      <button
-                        onClick={() => searchInLyrics(entry.word)}
-                        className={`text-sm px-3 py-1 rounded transition-colors ${
-                          darkMode 
-                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        Search in lyrics
-                      </button>
+        {/* Tab Content - Only show when manual is closed */}
+        {!showManual && (
+          <>
+            {/* Search Tab */}
+            {activeTab === 'search' && (
+              <div>
+                {(searchQuery || highlightWord) ? (
+                  <div>
+                    <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Found {searchResults.reduce((total, result) => total + result.matchCount, 0)} matches 
+                      in {searchResults.length} verse{searchResults.length !== 1 ? 's' : ''}{' '}
+                      for "{searchQuery || highlightWord}"
+                      {highlightWord && !searchQuery && (
+                        <span className={`ml-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          (highlighted from other tabs)
+                        </span>
+                      )}
                     </div>
                     
-                    {entry.phonetics && entry.phonetics[0] && (
-                      <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {entry.phonetics[0].text}
-                      </p>
-                    )}
-
-                    {entry.meanings.map((meaning, meaningIndex) => (
-                      <div key={meaningIndex} className="mb-4">
-                        <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {meaning.partOfSpeech}
-                        </h3>
-                        <div className="space-y-2">
-                          {meaning.definitions.slice(0, 3).map((def, defIndex) => (
-                            <div key={defIndex}>
-                              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {defIndex + 1}. {def.definition}
-                              </p>
-                              {def.example && (
-                                <p className={`text-sm italic mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  Example: "{def.example}"
-                                </p>
-                              )}
+                    <div className="space-y-4">
+                      {searchResults.map((result, index) => (
+                        <div key={index} className={`rounded-lg border p-4 transition-colors ${
+                          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                        }`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {result.songTitle}
+                            </h3>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {result.matchCount} match{result.matchCount !== 1 ? 'es' : ''}
+                              </span>
+                              <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Verse {result.verseIndex} • Line {result.lineNumber}
+                              </span>
                             </div>
-                          ))}
+                          </div>
+                          
+                          <div className={`text-sm leading-relaxed whitespace-pre-line ${
+                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            {highlightText(result.verseContent, searchQuery || highlightWord, result.isExactMatch)}
+                          </div>
+                          
+                          <button
+                            onClick={() => setSelectedSong(songs.find(s => s.id === result.songId))}
+                            className={`mt-3 text-xs underline transition-colors ${
+                              darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                          >
+                            View full song
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Search className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                    <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Start searching your lyrics
+                    </h3>
+                    <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Enter any word or phrase to find where you've used it before
+                    </p>
+                    
+                    {songs.length > 0 && (
+                      <div className={`rounded-lg border p-4 max-w-md mx-auto transition-colors ${
+                        darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                      }`}>
+                        <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <div>{stats.totalSongs} songs loaded</div>
+                          <div>{stats.totalWords.toLocaleString()} total words</div>
+                          <div>{stats.uniqueWords.toLocaleString()} unique words</div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                ))
-              ) : (
+                )}
+              </div>
+            )}
+
+            {/* Dictionary Tab */}
+            {activeTab === 'dictionary' && (
+              <div>
+                {definitionLoading && (
                 <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  No definition found for "{definitionQuery}"
+                  Looking up definition...
+                </div>
+              )}
+
+              {definitionResults && (
+                <div className="space-y-4">
+                  {definitionResults.length > 0 ? (
+                    definitionResults.map((entry, entryIndex) => (
+                      <div key={entryIndex} className={`rounded-lg border p-6 transition-colors ${
+                        darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                      }`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {entry.word}
+                          </h2>
+                          <button
+                            onClick={() => searchInLyrics(entry.word)}
+                            className={`text-sm px-3 py-1 rounded transition-colors ${
+                              darkMode 
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            Search in lyrics
+                          </button>
+                        </div>
+                        
+                        {entry.phonetics && entry.phonetics[0] && (
+                          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {entry.phonetics[0].text}
+                          </p>
+                        )}
+
+                        {entry.meanings.map((meaning, meaningIndex) => (
+                          <div key={meaningIndex} className="mb-4">
+                            <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {meaning.partOfSpeech}
+                            </h3>
+                            <div className="space-y-2">
+                              {meaning.definitions.slice(0, 3).map((def, defIndex) => (
+                                <div key={defIndex}>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    {defIndex + 1}. {def.definition}
+                                  </p>
+                                  {def.example && (
+                                    <p className={`text-sm italic mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      Example: "{def.example}"
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No definition found for "{definitionQuery}"
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
-        {/* Synonyms Tab */}
-        {activeTab === 'synonyms' && (
-          <div>
-            {synonymLoading && (
-              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Finding synonyms and antonyms...
-              </div>
-            )}
-
-            {synonymResults && (
-              <div className="grid gap-6 md:grid-cols-2 mobile-grid">
-                <div className={`rounded-lg border p-6 transition-colors ${
-                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Synonyms for "{synonymQuery}"
-                  </h3>
-                  {synonymResults.synonyms.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {synonymResults.synonyms.map((word, index) => (
-                        <button
-                          key={index}
-                          onClick={() => searchInLyrics(word.word, 'rhymes')}  // Route to rhymes tab
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            darkMode 
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                          }`}
-                        >
-                          {word.word}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No synonyms found
-                    </p>
-                  )}
-                </div>
-
-                <div className={`rounded-lg border p-6 transition-colors ${
-                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Antonyms for "{synonymQuery}"
-                  </h3>
-                  {synonymResults.antonyms.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {synonymResults.antonyms.map((word, index) => (
-                        <button
-                          key={index}
-                          onClick={() => searchInLyrics(word.word, 'rhymes')}  // Route to rhymes tab
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            darkMode 
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                          }`}
-                        >
-                          {word.word}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No antonyms found
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Rhymes Tab */}
-        {activeTab === 'rhymes' && (
-          <div>
-            {rhymeLoading && (
-              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Finding rhymes...
-              </div>
-            )}
-
-            {rhymeResults && (
-              <div className="space-y-6">
-                <div className={`rounded-lg border p-6 transition-colors ${
-                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Perfect Rhymes for "{rhymeQuery}"
-                  </h3>
-                  {rhymeResults.perfect.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {rhymeResults.perfect.map((word, index) => (
-                        <button
-                          key={index}
-                          onClick={() => searchInLyrics(word.word, 'dictionary')}  // Route to dictionary tab
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            darkMode 
-                              ? 'bg-blue-900 hover:bg-blue-800 text-blue-200' 
-                              : 'bg-blue-100 hover:bg-blue-200 text-blue-800'
-                          }`}
-                        >
-                          {word.word}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No perfect rhymes found
-                    </p>
-                  )}
-                </div>
-
-                <div className={`rounded-lg border p-6 transition-colors ${
-                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Near Rhymes for "{rhymeQuery}"
-                  </h3>
-                  {rhymeResults.near.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {rhymeResults.near.map((word, index) => (
-                        <button
-                          key={index}
-                          onClick={() => searchInLyrics(word.word, 'dictionary')}
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            darkMode 
-                              ? 'bg-green-900 hover:bg-green-800 text-green-200' 
-                              : 'bg-green-100 hover:bg-green-200 text-green-800'
-                          }`}
-                        >
-                          {word.word}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No near rhymes found
-                    </p>
-                  )}
-                </div>
-
-                <div className={`rounded-lg border p-6 transition-colors ${
-                  darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Sounds Like "{rhymeQuery}"
-                  </h3>
-                  {rhymeResults.soundsLike.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {rhymeResults.soundsLike.map((word, index) => (
-                        <button
-                          key={index}
-                          onClick={() => searchInLyrics(word.word, 'dictionary')}
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            darkMode 
-                              ? 'bg-purple-900 hover:bg-purple-800 text-purple-200' 
-                              : 'bg-purple-100 hover:bg-purple-200 text-purple-800'
-                          }`}
-                        >
-                          {word.word}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No similar sounding words found
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-{/* Analysis Tab */}
-{activeTab === 'analysis' && (
-  <div>
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-      <button
-        onClick={() => {
-          if (songs.length === 0) {
-            alert('Please upload some songs first!');
-            return;
-          }
-          const rhymeDict = generateRhymingDictionary(songs);
-          setAnalysisResults(rhymeDict);
-          setAnalysisType('rhyming-dictionary');
-        }}
-        className={`p-4 rounded-lg border transition-colors ${
-          darkMode 
-            ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-white' 
-            : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
-        }`}
-      >
-        <h3 className="font-medium mb-2">Rhyming Dictionary</h3>
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          Generate from your lyrics
-        </p>
-      </button>
-      
-      <button
-        onClick={() => {
-          if (songs.length === 0) {
-            alert('Please upload some songs first!');
-            return;
-          }
-          const report = generateWordFrequencyReport(songs);
-          setAnalysisResults(report);
-          setAnalysisType('word-frequency');
-        }}
-        className={`p-4 rounded-lg border transition-colors ${
-          darkMode 
-            ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-white' 
-            : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
-        }`}
-      >
-        <h3 className="font-medium mb-2">Word Frequency</h3>
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          Most used words report
-        </p>
-      </button>
-      
-      <div className={`p-4 rounded-lg border ${
-        darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      }`}>
-        <h3 className="font-medium mb-2">Analyze Song</h3>
-        <select
-          value={selectedSongForAnalysis || ''}
-          onChange={(e) => setSelectedSongForAnalysis(e.target.value)}
-          className={`w-full p-2 rounded border text-sm mb-2 ${
-            darkMode 
-              ? 'bg-gray-700 border-gray-600 text-white' 
-              : 'bg-white border-gray-300 text-gray-900'
-          }`}
-        >
-          <option value="">Select a song...</option>
-          {songs.map(song => (
-            <option key={song.id} value={song.id.toString()}>{song.title}</option>
-          ))}
-        </select>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { // No longer needs to be async
-              if (!selectedSongForAnalysis) return;
-              const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
-              if (!song) return;
-
-              setAnalysisResults(null); 
-              setAnalysisType('rhyme-scheme-loading');
-              
-              try {
-                // Pass the imported map here
-                const structuredLyrics = analyzeFullTextRhymes(song.lyrics, songVocabularyPhoneticMap); 
-                setAnalysisResults({ song, structuredLyrics });
-                setAnalysisType('rhyme-scheme');
-              } catch (error) {
-                console.error('Error in phonetic rhyme analysis:', error);
-                alert('An error occurred during rhyme analysis.');
-                setAnalysisType(null);
-              }
-            }}
-            disabled={!selectedSongForAnalysis}
-            className={`px-3 py-1 rounded text-xs transition-colors ${
-              selectedSongForAnalysis
-                ? darkMode 
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white' 
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-                : darkMode
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Rhyme Scheme
-          </button>
-          <button
-            onClick={() => {
-              if (!selectedSongForAnalysis) return;
-              const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
-              if (!song) {
-                console.error('Song not found:', selectedSongForAnalysis);
-                return;
-              }
-              try {
-                const meterAnalysis = analyzeMeter(song.lyrics);
-                setAnalysisResults({song, meterAnalysis});
-                setAnalysisType('meter-analysis');
-              } catch (error) {
-                console.error('Error in meter analysis:', error);
-                alert('Error analyzing syllables. Please try again.');
-              }
-            }}
-            disabled={!selectedSongForAnalysis}
-            className={`px-3 py-1 rounded text-xs transition-colors ${
-              selectedSongForAnalysis
-                ? darkMode 
-                  ? 'bg-green-600 hover:bg-green-500 text-white' 
-                  : 'bg-green-500 hover:bg-green-600 text-white'
-                : darkMode
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Syllables
-          </button>
-        </div>
-      </div>
-      
-      <div className={`p-4 rounded-lg border ${
-        darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      }`}>
-        <h3 className="font-medium mb-2">Quick Stats</h3>
-        <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          <div>{songs.length} songs</div>
-          <div>{stats.totalWords.toLocaleString()} words</div>
-          <div>{stats.uniqueWords.toLocaleString()} unique</div>
-        </div>
-      </div>
-    </div>
-    
-        {/* Analysis Results */}
-        {analysisResults && (
-          <div className={`rounded-lg border p-6 transition-colors ${
-            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            {analysisType === 'rhyming-dictionary' && (
+            {/* Synonyms Tab */}
+            {activeTab === 'synonyms' && (
               <div>
-                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Your Personal Rhyming Dictionary
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(analysisResults).slice(0, 20).map(([rhymeKey, words]) => (
-                    <div key={rhymeKey} className={`p-3 rounded border ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                {synonymLoading && (
+                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Finding synonyms and antonyms...
+                  </div>
+                )}
+
+                {synonymResults && (
+                  <div className="grid gap-6 md:grid-cols-2 mobile-grid">
+                    <div className={`rounded-lg border p-6 transition-colors ${
+                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                     }`}>
-                      <div className={`font-medium text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Words ending in "-{rhymeKey}"
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {words.map((word, index) => (
-                          <span key={word}>
-                            <span
-                              onClick={() => searchInLyrics(word, 'search')}
-                              className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
+                      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Synonyms for "{synonymQuery}"
+                      </h3>
+                      {synonymResults.synonyms.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {synonymResults.synonyms.map((word, index) => (
+                            <button
+                              key={index}
+                              onClick={() => searchInLyrics(word.word, 'rhymes')}  // Route to rhymes tab
+                              className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                 darkMode 
-                                  ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
-                                  : 'bg-white hover:bg-gray-100 text-gray-700'
+                                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                               }`}
                             >
-                              {word}
-                            </span>
-                            {index < words.length - 1 && (
-                              <span className={`text-xs mx-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                ,
-                              </span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
+                              {word.word}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No synonyms found
+                        </p>
+                      )}
                     </div>
-                  ))}
-                </div>
-                {Object.keys(analysisResults).length > 20 && (
-                  <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Showing first 20 rhyme groups. Total: {Object.keys(analysisResults).length}
-                  </p>
+
+                    <div className={`rounded-lg border p-6 transition-colors ${
+                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Antonyms for "{synonymQuery}"
+                      </h3>
+                      {synonymResults.antonyms.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {synonymResults.antonyms.map((word, index) => (
+                            <button
+                              key={index}
+                              onClick={() => searchInLyrics(word.word, 'rhymes')}  // Route to rhymes tab
+                              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                darkMode 
+                                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {word.word}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No antonyms found
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            )}           
-
-            {analysisType === 'rhyme-scheme-loading' && (
-               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Rhymes...</div>
             )}
 
-            {analysisType === 'rhyme-scheme' && (
+            {/* Rhymes Tab */}
+            {activeTab === 'rhymes' && (
               <div>
-                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Rhyme Analysis: "{analysisResults.song.title}"
-                </h3>
-                <div className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                  <HighlightedLyrics 
-                    structuredLyrics={analysisResults.structuredLyrics}
-                    darkMode={darkMode} 
-                  />
-                </div>
-              </div>
-            )}
-              
-            {analysisType === 'word-frequency' && (
-              <div>
-              </div>
-            )}
-            {analysisType === 'word-frequency' && (
-              <div>
-                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Word Frequency Report
-                </h3>
-                <div className="grid gap-4 md:grid-cols-3 mb-6">
-                  <div className={`p-4 rounded border ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {analysisResults.totalWords.toLocaleString()}
+                {rhymeLoading && (
+                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Finding rhymes...
+                  </div>
+                )}
+
+                {rhymeResults && (
+                  <div className="space-y-6">
+                    <div className={`rounded-lg border p-6 transition-colors ${
+                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Perfect Rhymes for "{rhymeQuery}"
+                      </h3>
+                      {rhymeResults.perfect.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {rhymeResults.perfect.map((word, index) => (
+                            <button
+                              key={index}
+                              onClick={() => searchInLyrics(word.word, 'dictionary')}  // Route to dictionary tab
+                              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                darkMode 
+                                  ? 'bg-blue-900 hover:bg-blue-800 text-blue-200' 
+                                  : 'bg-blue-100 hover:bg-blue-200 text-blue-800'
+                              }`}
+                            >
+                              {word.word}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No perfect rhymes found
+                        </p>
+                      )}
                     </div>
-                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Total Words
+
+                    <div className={`rounded-lg border p-6 transition-colors ${
+                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Near Rhymes for "{rhymeQuery}"
+                      </h3>
+                      {rhymeResults.near.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {rhymeResults.near.map((word, index) => (
+                            <button
+                              key={index}
+                              onClick={() => searchInLyrics(word.word, 'dictionary')}
+                              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                darkMode 
+                                  ? 'bg-green-900 hover:bg-green-800 text-green-200' 
+                                  : 'bg-green-100 hover:bg-green-200 text-green-800'
+                              }`}
+                            >
+                              {word.word}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No near rhymes found
+                        </p>
+                      )}
+                    </div>
+
+                    <div className={`rounded-lg border p-6 transition-colors ${
+                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Sounds Like "{rhymeQuery}"
+                      </h3>
+                      {rhymeResults.soundsLike.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {rhymeResults.soundsLike.map((word, index) => (
+                            <button
+                              key={index}
+                              onClick={() => searchInLyrics(word.word, 'dictionary')}
+                              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                                darkMode 
+                                  ? 'bg-purple-900 hover:bg-purple-800 text-purple-200' 
+                                  : 'bg-purple-100 hover:bg-purple-200 text-purple-800'
+                              }`}
+                            >
+                              {word.word}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No similar sounding words found
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className={`p-4 rounded border ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                )}
+              </div>
+            )}
+
+            {/* Analysis Tab */}
+            {activeTab === 'analysis' && (
+              <div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                  <button
+                    onClick={() => {
+                      if (songs.length === 0) {
+                        alert('Please upload some songs first!');
+                        return;
+                      }
+                      const rhymeDict = generateRhymingDictionary(songs);
+                      setAnalysisResults(rhymeDict);
+                      setAnalysisType('rhyming-dictionary');
+                    }}
+                    className={`p-4 rounded-lg border transition-colors ${
+                      darkMode 
+                        ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-white' 
+                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
+                    }`}
+                  >
+                    <h3 className="font-medium mb-2">Rhyming Dictionary</h3>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Generate from your lyrics
+                    </p>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (songs.length === 0) {
+                        alert('Please upload some songs first!');
+                        return;
+                      }
+                      const report = generateWordFrequencyReport(songs);
+                      setAnalysisResults(report);
+                      setAnalysisType('word-frequency');
+                    }}
+                    className={`p-4 rounded-lg border transition-colors ${
+                      darkMode 
+                        ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-white' 
+                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
+                    }`}
+                  >
+                    <h3 className="font-medium mb-2">Word Frequency</h3>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Most used words report
+                    </p>
+                  </button>
+                  
+                  <div className={`p-4 rounded-lg border ${
+                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                   }`}>
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {analysisResults.totalUniqueWords.toLocaleString()}
-                    </div>
-                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Unique Words
+                    <h3 className="font-medium mb-2">Analyze Song</h3>
+                    <select
+                      value={selectedSongForAnalysis || ''}
+                      onChange={(e) => setSelectedSongForAnalysis(e.target.value)}
+                      className={`w-full p-2 rounded border text-sm mb-2 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      <option value="">Select a song...</option>
+                      {songs.map(song => (
+                        <option key={song.id} value={song.id.toString()}>{song.title}</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { // No longer needs to be async
+                          if (!selectedSongForAnalysis) return;
+                          const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
+                          if (!song) return;
+
+                          setAnalysisResults(null); 
+                          setAnalysisType('rhyme-scheme-loading');
+                          
+                          try {
+                            // Pass the imported map here
+                            const structuredLyrics = analyzeFullTextRhymes(song.lyrics, songVocabularyPhoneticMap); 
+                            setAnalysisResults({ song, structuredLyrics });
+                            setAnalysisType('rhyme-scheme');
+                          } catch (error) {
+                            console.error('Error in phonetic rhyme analysis:', error);
+                            alert('An error occurred during rhyme analysis.');
+                            setAnalysisType(null);
+                          }
+                        }}
+                        disabled={!selectedSongForAnalysis}
+                        className={`px-3 py-1 rounded text-xs transition-colors ${
+                          selectedSongForAnalysis
+                            ? darkMode
+                              ? 'bg-black hover:bg-gray-800 text-white'
+                              : 'bg-gray-900 hover:bg-gray-800 text-white'
+                            : darkMode
+                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        Rhyme Scheme
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!selectedSongForAnalysis) return;
+                          const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
+                          if (!song) {
+                            console.error('Song not found:', selectedSongForAnalysis);
+                            return;
+                          }
+                          try {
+                            const meterAnalysis = analyzeMeter(song.lyrics);
+                            setAnalysisResults({song, meterAnalysis});
+                            setAnalysisType('meter-analysis');
+                          } catch (error) {
+                            console.error('Error in meter analysis:', error);
+                            alert('Error analyzing syllables. Please try again.');
+                          }
+                        }}
+                        disabled={!selectedSongForAnalysis}
+                        className={`px-3 py-1 rounded text-xs transition-colors ${
+                          selectedSongForAnalysis
+                            ? darkMode
+                              ? 'bg-black hover:bg-gray-800 text-white'
+                              : 'bg-gray-900 hover:bg-gray-800 text-white'
+                            : darkMode
+                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        Syllables
+                      </button>
                     </div>
                   </div>
-                  <div className={`p-4 rounded border ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                  
+                  <div className={`p-4 rounded-lg border ${
+                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                   }`}>
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {((analysisResults.totalUniqueWords / analysisResults.totalWords) * 100).toFixed(1)}%
-                    </div>
-                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Vocabulary Richness
+                    <h3 className="font-medium mb-2">Quick Stats</h3>
+                    <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <div>{songs.length} songs</div>
+                      <div>{stats.totalWords.toLocaleString()} words</div>
+                      <div>{stats.uniqueWords.toLocaleString()} unique</div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {analysisResults.topWords.map((item, index) => (
-                    <div key={item.word} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center">
-                        <span className={`text-sm w-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {index + 1}.
-                        </span>
-                        <button
-                          onClick={() => searchInLyrics(item.word)}
-                          className={`font-medium underline transition-colors ${
-                            darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
-                          }`}
-                        >
-                          {item.word}
-                        </button>
-                      </div>
-                      <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {item.count} times ({item.percentage}%)
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {analysisType === 'meter-analysis' && (
-            <div>
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Syllable & Meter Analysis: "{analysisResults.song.title}"
-              </h3>
-              
-              <div className="space-y-2">
-                {analysisResults.meterAnalysis.map((lineData, index) => (
-                  <div key={index} className="flex items-center gap-4 py-2">
-                    <span className={`w-12 text-center font-mono text-sm font-bold flex-shrink-0 ${
-                      darkMode ? 'text-blue-400' : 'text-blue-600'
-                    }`}>
-                      {lineData.syllables}
-                    </span>
-                    <span className={`flex-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {lineData.line.trim() || '(empty line)'}
-                    </span>
-                    <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {lineData.words} words
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              <div className={`mt-4 p-4 rounded border ${
-                darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-              }`}>
-                <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  <div>
-                    <strong>Average syllables per line:</strong> {
-                      (analysisResults.meterAnalysis.reduce((sum, line) => sum + line.syllables, 0) / 
-                      Math.max(1, analysisResults.meterAnalysis.filter(line => line.line.trim()).length)).toFixed(1)
-                    }
-                  </div>
-                  <div>
-                    <strong>Total lines:</strong> {analysisResults.meterAnalysis.filter(line => line.line.trim()).length}
-                  </div>
-                  <div>
-                    <strong>Syllable range:</strong> {
-                      Math.min(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
-                    } - {
-                      Math.max(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          </div>                     
-        )}
-      </div>
-    )}
-        {/* Upload Tab */}
-        {activeTab === 'upload' && (
-          <div>
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-                isDragging 
-                  ? darkMode 
-                    ? 'border-gray-500 bg-gray-800' 
-                    : 'border-gray-400 bg-gray-50'
-                  : darkMode
-                    ? 'border-gray-600 hover:border-gray-500'
-                    : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <Upload className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
-              <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Upload your lyrics
-              </h3>
-              <p className={`mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Drag and drop your .txt files here, or click to browse
-              </p>
-              
-              <input
-                type="file"
-                multiple
-                accept=".txt"
-                onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-900 hover:bg-gray-800 text-white'
-                }`}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Choose Files
-              </label>
-              
-              <p className={`text-xs mt-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                Supports up to 50 .txt files
-              </p>
-            </div>
-
-            {/* Uploaded Songs List */}
-            {songs.length > 0 && (
-              <div className="mt-8">
-                <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Your Songs ({songs.length})
-                </h3>
-                <div className="grid gap-3">
-                  {songs.map((song) => (
-                    <div key={song.id} className={`rounded-lg border p-4 transition-colors ${
-                      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <FileText className={`w-5 h-5 mr-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-                          <div>
-                            <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {song.title}
-                            </h4>
-                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {song.wordCount} words • Added {new Date(song.dateAdded).toLocaleDateString()}
-                            </p>
-                          </div>
+                {/* Analysis Results */}
+                {analysisResults && (
+                  <div className={`rounded-lg border p-6 transition-colors ${
+                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    {analysisType === 'rhyming-dictionary' && (
+                      <div>
+                        <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Your Personal Rhyming Dictionary
+                        </h3>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {Object.entries(analysisResults).slice(0, 20).map(([rhymeKey, words]) => (
+                            <div key={rhymeKey} className={`p-3 rounded border ${
+                              darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                            }`}>
+                              <div className={`font-medium text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Words ending in "-{rhymeKey}"
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {words.map((word, index) => (
+                                  <span key={word}>
+                                    <span
+                                      onClick={() => searchInLyrics(word, 'search')}
+                                      className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
+                                        darkMode 
+                                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
+                                          : 'bg-white hover:bg-gray-100 text-gray-700'
+                                      }`}
+                                    >
+                                      {word}
+                                    </span>
+                                    {index < words.length - 1 && (
+                                      <span className={`text-xs mx-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                        ,&nbsp;&nbsp;
+                                      </span>
+                                    )}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <button
-                          onClick={() => setSelectedSong(song)}
-                          className={`text-sm underline transition-colors ${
-                            darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-                          }`}
-                        >
-                          View
-                        </button>
+                        {Object.keys(analysisResults).length > 20 && (
+                          <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Showing first 20 rhyme groups. Total: {Object.keys(analysisResults).length}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                    )}           
 
-        {/* Stats Tab */}
-        {activeTab === 'stats' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className={`rounded-lg border p-6 transition-colors ${
-                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-              }`}>
-                <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {stats.totalSongs}
-                </div>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Total Songs
-                </div>
-              </div>
-              <div className={`rounded-lg border p-6 transition-colors ${
-                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-              }`}>
-                <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {stats.totalWords.toLocaleString()}
-                </div>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Total Words
-                </div>
-              </div>
-              <div className={`rounded-lg border p-6 transition-colors ${
-                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-              }`}>
-                <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {stats.uniqueWords.toLocaleString()}
-                </div>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Unique Words
-                </div>
-              </div>
-            </div>
+                    {analysisType === 'rhyme-scheme-loading' && (
+                       <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Rhymes...</div>
+                    )}
 
-            {stats.mostUsedWords.length > 0 && (
-              <div className={`rounded-lg border p-6 transition-colors ${
-                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-              }`}>
-                <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Most Used Words
-                </h3>
-                <div className="space-y-2">
-                  {stats.mostUsedWords.map(([word, count], index) => (
-                    <div key={word} className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className={`text-sm w-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {index + 1}.
-                        </span>
-                        <button
-                          onClick={() => handleSearch(word)}
-                          className={`underline transition-colors ${
-                            darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
-                          }`}
-                        >
-                          {word}
-                        </button>
+                    {analysisType === 'rhyme-scheme' && (
+                      <div>
+                        <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Rhyme Analysis: "{analysisResults.song.title}"
+                        </h3>
+                        <div className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                          <HighlightedLyrics 
+                            structuredLyrics={analysisResults.structuredLyrics}
+                            darkMode={darkMode} 
+                          />
+                        </div>
                       </div>
-                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {count} times
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                    )}
+                      
+                    {analysisType === 'word-frequency' && (
+                      <div>
+                        <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Word Frequency Report
+                        </h3>
+                        <div className="grid gap-4 md:grid-cols-3 mb-6">
+                          <div className={`p-4 rounded border ${
+                            darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                          }`}>
+                            <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {analysisResults.totalWords.toLocaleString()}
+                            </div>
+                            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Total Words
+                            </div>
+                          </div>
+                          <div className={`p-4 rounded border ${
+                            darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                         }`}>
+                           <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                             {analysisResults.totalUniqueWords.toLocaleString()}
+                           </div>
+                           <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                             Unique Words
+                           </div>
+                         </div>
+                         <div className={`p-4 rounded border ${
+                           darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                         }`}>
+                           <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                             {((analysisResults.totalUniqueWords / analysisResults.totalWords) * 100).toFixed(1)}%
+                           </div>
+                           <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                             Vocabulary Richness
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <div className="space-y-2 max-h-96 overflow-y-auto">
+                         {analysisResults.topWords.map((item, index) => (
+                           <div key={item.word} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                             <div className="flex items-center">
+                               <span className={`text-sm w-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                 {index + 1}.
+                               </span>
+                               <button
+                                 onClick={() => searchInLyrics(item.word)}
+                                 className={`font-medium underline transition-colors ${
+                                   darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
+                                 }`}
+                               >
+                                 {item.word}
+                               </button>
+                             </div>
+                             <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                               {item.count} times ({item.percentage}%)
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                   {analysisType === 'meter-analysis' && (
+                   <div>
+                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       Syllable & Meter Analysis: "{analysisResults.song.title}"
+                     </h3>
+                     
+                     <div className="space-y-2">
+                       {analysisResults.meterAnalysis.map((lineData, index) => (
+                         <div key={index} className="flex items-center gap-4 py-2">
+                           <span className={`w-12 text-center font-mono text-sm font-bold flex-shrink-0 ${
+                             darkMode ? 'text-blue-400' : 'text-blue-600'
+                           }`}>
+                             {lineData.syllables}
+                           </span>
+                           <span className={`flex-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                             {lineData.line.trim() || '(empty line)'}
+                           </span>
+                           <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                             {lineData.words} words
+                           </span>
+                         </div>
+                       ))}
+                     </div>
+                     
+                     <div className={`mt-4 p-4 rounded border ${
+                       darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                     }`}>
+                       <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                         <div>
+                           <strong>Average syllables per line:</strong> {
+                             (analysisResults.meterAnalysis.reduce((sum, line) => sum + line.syllables, 0) / 
+                             Math.max(1, analysisResults.meterAnalysis.filter(line => line.line.trim()).length)).toFixed(1)
+                           }
+                         </div>
+                         <div>
+                           <strong>Total lines:</strong> {analysisResults.meterAnalysis.filter(line => line.line.trim()).length}
+                         </div>
+                         <div>
+                           <strong>Syllable range:</strong> {
+                             Math.min(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
+                           } - {
+                             Math.max(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
+                           }
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 </div>                     
+               )}
+             </div>
+           )}
 
+           {/* Upload Tab */}
+           {activeTab === 'upload' && (
+             <div>
+               <div
+                 onDragOver={handleDragOver}
+                 onDragLeave={handleDragLeave}
+                 onDrop={handleDrop}
+                 className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                   isDragging 
+                     ? darkMode 
+                       ? 'border-gray-500 bg-gray-800' 
+                       : 'border-gray-400 bg-gray-50'
+                     : darkMode
+                       ? 'border-gray-600 hover:border-gray-500'
+                       : 'border-gray-300 hover:border-gray-400'
+                 }`}
+               >
+                 <Upload className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                 <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                   Upload your lyrics
+                 </h3>
+                 <p className={`mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                   Drag and drop your .txt files here, or click to browse
+                 </p>
+                 
+                 <input
+                   type="file"
+                   multiple
+                   accept=".txt"
+                   onChange={(e) => handleFileUpload(Array.from(e.target.files))}
+                   className="hidden"
+                   id="file-upload"
+                 />
+                 <label
+                   htmlFor="file-upload"
+                   className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
+                     darkMode 
+                       ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                       : 'bg-gray-900 hover:bg-gray-800 text-white'
+                   }`}
+                 >
+                   <Plus className="w-4 h-4 mr-2" />
+                   Choose Files
+                 </label>
+                 
+                 <p className={`text-xs mt-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                   Supports up to 50 .txt files
+                 </p>
+               </div>
+
+               {/* Uploaded Songs List */}
+               {songs.length > 0 && (
+                 <div className="mt-8">
+                   <div className="flex items-center justify-between mb-4">
+                     <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       Your Songs ({songs.length})
+                     </h3>
+                     <button
+                       onClick={deleteAllSongs}
+                       className={`px-3 py-1 rounded text-sm transition-colors ${
+                         darkMode 
+                           ? 'bg-red-800 hover:bg-red-700 text-red-200' 
+                           : 'bg-red-600 hover:bg-red-700 text-white'
+                       }`}
+                     >
+                       <Trash2 className="w-4 h-4 inline mr-1" />
+                       Delete All
+                     </button>
+                   </div>
+                   <div className="grid gap-3">
+                     {songs.map((song) => (
+                       <div key={song.id} className={`rounded-lg border p-4 transition-colors ${
+                         darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                       }`}>
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center">
+                             <FileText className={`w-5 h-5 mr-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                             <div>
+                               <div className="flex items-center gap-2">
+                                 <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                   {song.title}
+                                 </h4>
+                                 {song.isExample && (
+                                   <span className={`text-xs px-2 py-1 rounded-full ${
+                                     darkMode 
+                                       ? 'bg-blue-900 text-blue-200 border border-blue-700' 
+                                       : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                   }`}>
+                                     Example
+                                   </span>
+                                 )}
+                               </div>
+                               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                 {song.wordCount} words • Added {new Date(song.dateAdded).toLocaleDateString()}
+                               </p>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <button
+                               onClick={() => setSelectedSong(song)}
+                               className={`text-sm underline transition-colors ${
+                                 darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                               }`}
+                             >
+                               View
+                             </button>
+                             <button
+                               onClick={() => deleteSong(song.id)}
+                               className={`p-1 rounded transition-colors ${
+                                 darkMode 
+                                   ? 'text-red-400 hover:bg-red-900 hover:text-red-300' 
+                                   : 'text-red-500 hover:bg-red-50 hover:text-red-700'
+                               }`}
+                               title="Delete song"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+
+           {/* Stats Tab */}
+           {activeTab === 'stats' && (
+             <div className="space-y-6">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     {stats.totalSongs}
+                   </div>
+                   <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                     Total Songs
+                   </div>
+                 </div>
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     {stats.totalWords.toLocaleString()}
+                   </div>
+                   <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                     Total Words
+                   </div>
+                 </div>
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     {stats.uniqueWords.toLocaleString()}
+                   </div>
+                   <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                     Unique Words
+                   </div>
+                 </div>
+               </div>
+
+               {stats.mostUsedWords.length > 0 && (
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     Most Used Words
+                   </h3>
+                   <div className="space-y-2">
+                     {stats.mostUsedWords.map(([word, count], index) => (
+                       <div key={word} className="flex items-center justify-between">
+                         <div className="flex items-center">
+                           <span className={`text-sm w-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                             {index + 1}.
+                           </span>
+                           <button
+                             onClick={() => handleSearch(word)}
+                             className={`underline transition-colors ${
+                               darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
+                             }`}
+                           >
+                             {word}
+                           </button>
+                         </div>
+                         <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                           {count} times
+                         </span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+         </>
+       )}
+     </div>
       {/* Song Modal */}
       {selectedSong && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
