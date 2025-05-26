@@ -830,7 +830,7 @@ const getEnhancedRhymeData = (phoneticString) => {
         vowelFamilyMatch = true;
       } else {
         // Check vowel families
-        for (const [familyName, vowels] of Object.entries(vowelFamilies)) {
+        for (const [, vowels] of Object.entries(vowelFamilies)) {
           if (vowels.includes(coreVowel1) && vowels.includes(coreVowel2)) {
             vowelFamilyScore = 75;
             vowelFamilyMatch = true;
