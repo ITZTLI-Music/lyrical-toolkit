@@ -123,7 +123,7 @@ const LyricsSearchApp = () => {
 
     // Small delay to ensure localStorage has been loaded first
     setTimeout(loadExampleSong, 100);
-  }, [songs.length]); // Depend on songs.length so it runs after localStorage loads
+  }, [songs.length, songs]); // Depend on songs.length so it runs after localStorage loads
 
   // Load manual content
   const loadManual = async () => {
@@ -1517,7 +1517,7 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
               <div className={`whitespace-pre-line leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {manualContent.split('\n').map((line, index) => {
                   // Make section headers bold (lines that are all caps or start with caps and don't have lowercase)
-                  const isHeader = line.match(/^[A-Z][A-Z\s\-]*$/) && line.trim().length > 0;
+                  const isHeader = line.match(/^[A-Z][A-Z\s-]*$/) && line.trim().length > 0;
                   const isSubHeader = line.match(/^[A-Z][a-z\s]*:$/) && line.trim().length > 0;
                   
                   if (isHeader) {
