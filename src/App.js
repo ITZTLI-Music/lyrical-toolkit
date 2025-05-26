@@ -53,13 +53,20 @@ const LyricsSearchApp = () => {
   const [showManual, setShowManual] = useState(false);
   const [manualContent, setManualContent] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
+  const [exampleSongDeleted, setExampleSongDeleted] = useState(false);
 
-  // Load example song and manual
+  // Load example song
   const loadingExampleRef = useRef(false);
   
   useEffect(() => {
     const loadExampleSong = async () => {
       console.log('loadExampleSong function called');
+      
+      // Don't load if user has deleted it this session
+      if (exampleSongDeleted) {
+        console.log('Example song was deleted by user, skipping');
+        return;
+      }
       
       // Prevent concurrent loading
       if (loadingExampleRef.current) {
@@ -67,21 +74,15 @@ const LyricsSearchApp = () => {
         return;
       }
       
-      // Check if example song already exists in current songs
+      // Check if example song already exists
       const exampleExists = songs.some(song => song.isExample);
-      console.log('Example song exists in current songs:', exampleExists);
-      
       if (exampleExists) {
-        console.log('Example song already exists, skipping load');
+        console.log('Example song already exists, skipping');
         return;
       }
       
       // Set loading flag
       loadingExampleRef.current = true;
-      
-      // If no example song exists, clear the session flag and load it
-      console.log('No example song found, clearing session flag and loading');
-      sessionStorage.removeItem('exampleSongLoaded');
 
       try {
         console.log('Attempting to fetch example song...');
@@ -101,7 +102,6 @@ const LyricsSearchApp = () => {
           
           console.log('Adding example song to state');
           setSongs(prev => [exampleSong, ...prev]);
-          sessionStorage.setItem('exampleSongLoaded', 'true');
           
           // Clear any previous search states for fresh start
           setSearchQuery('');
@@ -121,9 +121,11 @@ const LyricsSearchApp = () => {
       }
     };
 
-    // Small delay to ensure localStorage has been loaded first
-    setTimeout(loadExampleSong, 100);
-  }, [songs.length, songs]); // Depend on songs.length so it runs after localStorage loads
+    // Load example song on mount or when songs array is empty
+    if (songs.length === 0) {
+      setTimeout(loadExampleSong, 100);
+    }
+  }, [songs.length, exampleSongDeleted]); // Add exampleSongDeleted as dependency
 
   // Load manual content
   const loadManual = async () => {
@@ -145,42 +147,7 @@ const LyricsSearchApp = () => {
     setManualLoading(false);
   };
 
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedSongs = localStorage.getItem('lyricsSearchSongs');
-    const savedHistory = localStorage.getItem('lyricsSearchHistory');
-    const savedDarkMode = localStorage.getItem('lyricsSearchDarkMode');
-    const savedHighlight = localStorage.getItem('lyricsSearchHighlight');
-    
-    if (savedSongs) {
-      const parsedSongs = JSON.parse(savedSongs);
-      // Only load non-example songs from localStorage
-      const nonExampleSongs = parsedSongs.filter(song => !song.isExample);
-      setSongs(nonExampleSongs);
-    }
-    if (savedHistory) {
-      setSearchHistory(JSON.parse(savedHistory));
-    }
-    if (savedDarkMode) {
-      setDarkMode(JSON.parse(savedDarkMode));
-    }
-    if (savedHighlight) {
-      setHighlightWord(savedHighlight);
-    }
-
-    // Detect system dark mode preference
-    if (!savedDarkMode && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
-    }
-  }, []);
-
   // Save to localStorage whenever data changes
-  useEffect(() => {
-    // Only save non-example songs to localStorage
-    const songsToSave = songs.filter(song => !song.isExample);
-    localStorage.setItem('lyricsSearchSongs', JSON.stringify(songsToSave));
-  }, [songs]);
-
   useEffect(() => {
     localStorage.setItem('lyricsSearchHistory', JSON.stringify(searchHistory));
   }, [searchHistory]);
@@ -335,7 +302,14 @@ const LyricsSearchApp = () => {
   // Delete individual song
   const deleteSong = (songId) => {
     if (window.confirm('Are you sure you want to delete this song?')) {
-      setSongs(prev => prev.filter(song => song.id !== songId));
+      setSongs(prev => {
+        const songToDelete = prev.find(song => song.id === songId);
+        // If deleting the example song, mark it as deleted
+        if (songToDelete && songToDelete.isExample) {
+          setExampleSongDeleted(true);
+        }
+        return prev.filter(song => song.id !== songId);
+      });
     }
   };
 
@@ -1368,7 +1342,7 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
               <button
                 onClick={() => {
                   setShowManual(!showManual);
-                  if (!showManual) {
+                  if (!showManual && !manualContent) {
                     loadManual();
                   }
                 }}
