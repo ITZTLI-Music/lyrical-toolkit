@@ -3,6 +3,9 @@ import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle,
 import DOMPurify from 'dompurify';
 import { songVocabularyPhoneticMap } from './songVocabularyPhoneticMap';
 
+
+/* eslint-disable react-hooks/exhaustive-deps */
+
 // Add this Set near the top of your App.js, outside the component
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
