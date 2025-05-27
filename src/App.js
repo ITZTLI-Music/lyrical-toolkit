@@ -1646,7 +1646,7 @@ const getEnhancedRhymeData = (phoneticString) => {
       vocabularyComplexity: avgVocabularyComplexity,
       rhymeStats: combinedRhymeStats
     };
-  }, [songs, selectedStatsFilter, songs.length]);
+  }, [songs, selectedStatsFilter, songs.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clean highlight function with exact match support
   const highlightText = (text, query, isExactMatch = false) => {
