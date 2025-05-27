@@ -1505,7 +1505,7 @@ const getEnhancedRhymeData = (phoneticString) => {
         setSelectedStatsFilter('all');
       }
     }
-  }, [songs, selectedStatsFilter, songs.length, analyzeRhymeStatistics, calculateReadingLevel, calculateVocabularyComplexity]);
+  }, [songs, selectedStatsFilter, songs.length, analyzeRhymeStatistics, calculateReadingLevel, calculateVocabularyComplexity]);/* eslint-disable react-hooks/exhaustive-deps */
   
   // Enhanced statistics with song filtering
   const stats = useMemo(() => {
