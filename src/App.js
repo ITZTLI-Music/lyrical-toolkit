@@ -1088,8 +1088,8 @@ const LyricsSearchApp = () => {
         const hasSharedEnding = (
           ending1 === ending2 || 
           lastChar1 === lastChar2 ||
-          word1.toLowerCase().endsWith('m') && word2.toLowerCase().endsWith('nt') ||
-          word1.toLowerCase().endsWith('nt') && word2.toLowerCase().endsWith('m') ||
+          (word1.toLowerCase().endsWith('m') && word2.toLowerCase().endsWith('nt')) ||
+          (word1.toLowerCase().endsWith('nt') && word2.toLowerCase().endsWith('m')) ||
           // Add more specific patterns that should be kept
           (word1.toLowerCase().includes('oom') && word2.toLowerCase().includes('ew')) ||
           (word1.toLowerCase().includes('est') && word2.toLowerCase().includes('ed'))
@@ -1505,7 +1505,7 @@ const getEnhancedRhymeData = (phoneticString) => {
         setSelectedStatsFilter('all');
       }
     }
-  }, [songs, selectedStatsFilter]);
+  }, [songs, selectedStatsFilter, songs.length, analyzeRhymeStatistics, calculateReadingLevel, calculateVocabularyComplexity]);
   
   // Enhanced statistics with song filtering
   const stats = useMemo(() => {
