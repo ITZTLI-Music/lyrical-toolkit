@@ -770,6 +770,365 @@ const LyricsSearchApp = () => {
       return Math.max(1, syllableCount);
     };
 
+  // Calculate reading level using Flesch-Kincaid Grade Level formula
+  const calculateReadingLevel = (lyrics) => {
+    if (!lyrics || typeof lyrics !== 'string') return 0;
+    
+    // Split into sentences - be more strict about what counts as a sentence
+    const sentences = lyrics.split(/[.!?]+/).filter(s => s.trim().length > 5); // Minimum 5 chars per sentence
+    const words = lyrics.toLowerCase().split(/\s+/).filter(word => word.match(/[a-zA-Z]/));
+    const cleanWords = words.map(word => word.replace(/[^\w]/g, '')).filter(word => word.length > 0);
+    
+    // Need minimum thresholds for meaningful calculation
+    if (sentences.length === 0 || cleanWords.length === 0) return 0;
+    if (sentences.length < 2) return Math.min(cleanWords.length * 0.5, 12); // Very short texts
+    
+    const totalSyllables = cleanWords.reduce((sum, word) => sum + countSyllables(word), 0);
+    const avgWordsPerSentence = cleanWords.length / sentences.length;
+    const avgSyllablesPerWord = totalSyllables / cleanWords.length;
+    
+    // Flesch-Kincaid Grade Level formula
+    let gradeLevel = (0.39 * avgWordsPerSentence) + (11.8 * avgSyllablesPerWord) - 15.59;
+    
+    // Apply realistic bounds - most texts should fall between 1-20
+    gradeLevel = Math.max(1, Math.min(20, gradeLevel));
+    
+    // Round to 1 decimal place
+    return Math.round(gradeLevel * 10) / 10;
+  };
+
+  // Calculate vocabulary complexity score
+  const calculateVocabularyComplexity = (lyrics, wordFrequencies) => {
+    if (!lyrics || typeof lyrics !== 'string') return 0;
+    
+    const words = lyrics.toLowerCase().split(/\s+/)
+      .map(word => word.replace(/[^\w]/g, ''))
+      .filter(word => word.length > 0);
+    
+    if (words.length === 0) return 0;
+    
+    let complexityScore = 0;
+    
+    words.forEach(word => {
+      const syllables = countSyllables(word);
+      const length = word.length;
+      const frequency = wordFrequencies[word] || 1;
+      const rarity = 1 / frequency; // Less frequent words are more complex
+      
+      // Weighted complexity: syllables (40%), length (30%), rarity (30%)
+      const wordComplexity = (syllables * 0.4) + (length * 0.3) + (rarity * 0.3);
+      complexityScore += wordComplexity;
+    });
+    
+    return Math.round((complexityScore / words.length) * 10) / 10; // Average complexity per word
+  };
+
+  // Analyze rhyme statistics using existing phonetic system - CONSERVATIVE VERSION
+  const analyzeRhymeStatistics = (lyrics, vocabularyMap) => {
+    if (!lyrics || typeof lyrics !== 'string') return {
+      totalRhymableWords: 0,
+      perfectRhymes: 0,
+      nearRhymes: 0,
+      soundsLike: 0,
+      rhymeDensity: 0,
+      internalRhymes: 0,
+      rhymeGroups: []
+    };
+
+    const lines = lyrics.split('\n').filter(line => line.trim().length > 0);
+    const endWords = []; // Focus on end-of-line words primarily
+    const allRhymableWords = [];
+    let internalRhymeCount = 0;
+
+    // Extract end-of-line words and some internal words
+    lines.forEach((line, lineIndex) => {
+      const wordsInLine = line.split(/\s+/)
+        .map(word => word.trim().toLowerCase().replace(/[^\w\s'-]|('s\b)|(^\s*')|('\s*$)/g, ''))
+        .filter(word => word && word.length >= 3 && !STOP_WORDS.has(word)); // Raised minimum length
+
+      if (wordsInLine.length === 0) return;
+
+      // Get end word (most important for rhyme schemes)
+      const endWord = wordsInLine[wordsInLine.length - 1];
+      const endPhonetic = vocabularyMap[endWord];
+      if (endPhonetic) {
+        const rhymeData = getEnhancedRhymeData(endPhonetic);
+        if (rhymeData) {
+          const wordData = { word: endWord, rhymeData, lineIndex, isEndWord: true };
+          endWords.push(wordData);
+          allRhymableWords.push(wordData);
+        }
+      }
+
+      // Also get some internal words for internal rhyme detection (but be selective)
+      const internalWordsData = [];
+      wordsInLine.slice(0, -1).forEach(word => {
+        const phoneticData = vocabularyMap[word];
+        if (phoneticData && word.length >= 4) { // Higher threshold for internal words
+          const rhymeData = getEnhancedRhymeData(phoneticData);
+          if (rhymeData) {
+            const wordData = { word, rhymeData, lineIndex, isEndWord: false };
+            internalWordsData.push(wordData);
+            allRhymableWords.push(wordData);
+          }
+        }
+      });
+
+      // Check for internal rhymes within this line (conservative)
+      for (let i = 0; i < internalWordsData.length; i++) {
+        for (let j = i + 1; j < internalWordsData.length; j++) {
+          const similarity = calculatePhoneticSimilarity(
+            internalWordsData[i].rhymeData,
+            internalWordsData[j].rhymeData
+          );
+          if (similarity >= 75) { // Slightly lower threshold for internal rhymes
+            internalRhymeCount++;
+          }
+        }
+      }
+    });
+
+    if (allRhymableWords.length === 0) {
+      return {
+        totalRhymableWords: 0,
+        perfectRhymes: 0,
+        nearRhymes: 0,
+        soundsLike: 0,
+        rhymeDensity: 0,
+        internalRhymes: internalRhymeCount,
+        rhymeGroups: []
+      };
+    }
+
+    // Find unique rhyme relationships (avoid double counting)
+    const uniqueRhymePairs = new Set();
+    let perfectRhymeCount = 0;
+    let nearRhymeCount = 0;
+    let soundsLikeCount = 0;
+    const rhymeGroups = new Map();
+
+    // Prioritize end-word rhymes
+    for (let i = 0; i < endWords.length; i++) {
+      for (let j = i + 1; j < endWords.length; j++) {
+        const word1 = endWords[i];
+        const word2 = endWords[j];
+        
+        // Skip if same word
+        if (word1.word === word2.word) continue;
+        
+        // Create unique pair identifier (sorted to avoid duplicates)
+        const pairKey = [word1.word, word2.word].sort().join('|');
+        if (uniqueRhymePairs.has(pairKey)) continue;
+        uniqueRhymePairs.add(pairKey);
+
+        const similarity = calculatePhoneticSimilarity(word1.rhymeData, word2.rhymeData);
+        
+        if (similarity >= 82) { // Slightly lower threshold for perfect rhymes
+          perfectRhymeCount++;
+          
+          // Group perfect rhymes
+          const groupKey = word1.rhymeData.perfect;
+          if (!rhymeGroups.has(groupKey)) {
+            rhymeGroups.set(groupKey, new Set());
+          }
+          rhymeGroups.get(groupKey).add(word1.word);
+          rhymeGroups.get(groupKey).add(word2.word);
+          
+        } else if (similarity >= 80) { // Lower threshold for near rhymes
+          nearRhymeCount++;
+        } else if (similarity >= 78) { // Higher threshold for sounds-like to reduce false positives
+          soundsLikeCount++;
+        }
+      }
+    }
+
+    // Also check some cross-category rhymes (end words with prominent internal words)
+    const internalWords = allRhymableWords.filter(w => !w.isEndWord && w.word.length >= 5);
+    for (let i = 0; i < endWords.length && i < 20; i++) { // Limit to prevent explosion
+      for (let j = 0; j < internalWords.length && j < 10; j++) {
+        const endWord = endWords[i];
+        const internalWord = internalWords[j];
+        
+        if (endWord.word === internalWord.word) continue;
+        
+        const pairKey = [endWord.word, internalWord.word].sort().join('|');
+        if (uniqueRhymePairs.has(pairKey)) continue;
+        uniqueRhymePairs.add(pairKey);
+
+        const similarity = calculatePhoneticSimilarity(endWord.rhymeData, internalWord.rhymeData);
+        
+        if (similarity >= 82) {
+          perfectRhymeCount++;
+        } else if (similarity >= 68) {
+          nearRhymeCount++;
+        } else if (similarity >= 55) {
+          soundsLikeCount++;
+        }
+      }
+    }
+
+    // Convert rhyme groups to array and consolidate duplicates
+    let rhymeGroupsArray = Array.from(rhymeGroups.entries())
+      .filter(([, words]) => words.size >= 2)
+      .map(([key, words]) => ({
+        rhymeSound: key,
+        words: Array.from(words),
+        count: words.size
+      }));
+
+    // Consolidate similar/duplicate rhyme groups
+    const consolidateRhymeGroups = (groups) => {
+      const consolidated = [];
+      const processed = new Set();
+
+      for (let i = 0; i < groups.length; i++) {
+        if (processed.has(i)) continue;
+
+        const currentGroup = groups[i];
+        const mergedWords = new Set(currentGroup.words);
+        const similarGroups = [i];
+
+        // Find groups with similar phonetic patterns or overlapping words
+        for (let j = i + 1; j < groups.length; j++) {
+          if (processed.has(j)) continue;
+
+          const otherGroup = groups[j];
+          
+          // Check if groups should be merged
+          const shouldMerge = checkGroupsShouldMerge(currentGroup, otherGroup);
+          
+          if (shouldMerge) {
+            // Merge the groups
+            otherGroup.words.forEach(word => mergedWords.add(word));
+            similarGroups.push(j);
+            processed.add(j);
+          }
+        }
+
+        // Mark current group as processed
+        processed.add(i);
+
+        // Create consolidated group
+        if (mergedWords.size >= 2) {
+          // Use the most representative rhyme sound from the merged groups
+          const bestRhymeSound = selectBestRhymeSound(
+            similarGroups.map(idx => groups[idx].rhymeSound)
+          );
+          
+          consolidated.push({
+            rhymeSound: bestRhymeSound,
+            words: Array.from(mergedWords).sort(),
+            count: mergedWords.size
+          });
+        }
+      }
+
+      return consolidated;
+    };
+
+    // Helper function to determine if two groups should be merged - IMPROVED
+    const checkGroupsShouldMerge = (group1, group2) => {
+      const words1 = new Set(group1.words);
+      const words2 = new Set(group2.words);
+      
+      // Merge if there's ANY word overlap (to catch duplicates like "grew" in multiple groups)
+      const intersection = new Set([...words1].filter(word => words2.has(word)));
+      
+      if (intersection.size > 0) {
+        return true; // Merge any groups that share words
+      }
+      
+      // Also merge if the groups have very similar phonetic patterns
+      if (group1.rhymeSound === group2.rhymeSound) {
+        return true;
+      }
+      
+      return false;
+    };
+
+    // Helper function to select the best representative rhyme sound
+    const selectBestRhymeSound = (rhymeSounds) => {
+      if (rhymeSounds.length === 1) return rhymeSounds[0];
+      
+      // Prefer shorter, more general patterns
+      const sorted = rhymeSounds.sort((a, b) => {
+        const phonemes1 = a.split(' ').length;
+        const phonemes2 = b.split(' ').length;
+        
+        // Prefer patterns with 1-2 phonemes over longer ones
+        if (phonemes1 <= 2 && phonemes2 > 2) return -1;
+        if (phonemes2 <= 2 && phonemes1 > 2) return 1;
+        
+        // If both similar length, prefer the one that looks more "standard"
+        return phonemes1 - phonemes2;
+      });
+      
+      return sorted[0];
+    };
+
+    // Apply consolidation
+    rhymeGroupsArray = consolidateRhymeGroups(rhymeGroupsArray);
+
+    // Filter out weak/non-rhyming groups
+    rhymeGroupsArray = rhymeGroupsArray.filter(group => {
+      // Remove groups with less than 2 words
+      if (group.count < 2) return false;
+      
+      // For 2-word groups, check if they actually rhyme well
+      if (group.count === 2) {
+        const [word1, word2] = group.words;
+        
+        // Remove obvious non-rhymes (different ending sounds)
+        const ending1 = word1.toLowerCase().slice(-2);
+        const ending2 = word2.toLowerCase().slice(-2);
+        const lastChar1 = word1.toLowerCase().slice(-1);
+        const lastChar2 = word2.toLowerCase().slice(-1);
+        
+        // If they don't share ANY similar ending pattern, probably not a real rhyme
+        const hasSharedEnding = (
+          ending1 === ending2 || 
+          lastChar1 === lastChar2 ||
+          word1.toLowerCase().endsWith('m') && word2.toLowerCase().endsWith('nt') ||
+          word1.toLowerCase().endsWith('nt') && word2.toLowerCase().endsWith('m') ||
+          // Add more specific patterns that should be kept
+          (word1.toLowerCase().includes('oom') && word2.toLowerCase().includes('ew')) ||
+          (word1.toLowerCase().includes('est') && word2.toLowerCase().includes('ed'))
+        );
+        
+        // For very different words, check if they're actually similar sounding
+        const wordsAreToodifferent = (
+          Math.abs(word1.length - word2.length) > 3 || // Very different lengths
+          (word1.toLowerCase() === 'cataclysm' && word2.toLowerCase() === 'environment') ||
+          (word1.toLowerCase() === 'environment' && word2.toLowerCase() === 'cataclysm')
+        );
+        
+        if (wordsAreToodifferent || !hasSharedEnding) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+
+    // Final sort and limit
+    rhymeGroupsArray = rhymeGroupsArray
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    const totalWords = lyrics.toLowerCase().split(/\s+/).filter(word => word.match(/[a-zA-Z]/)).length;
+    const rhymeDensity = totalWords > 0 ? ((allRhymableWords.length / totalWords) * 100) : 0;
+
+    return {
+      totalRhymableWords: allRhymableWords.length,
+      perfectRhymes: perfectRhymeCount,
+      nearRhymes: nearRhymeCount,
+      soundsLike: soundsLikeCount,
+      rhymeDensity: Math.round(rhymeDensity * 10) / 10,
+      internalRhymes: internalRhymeCount,
+      rhymeGroups: rhymeGroupsArray
+    };
+  };   
+
   const analyzeMeter = (lyrics) => {
     try {
       if (!lyrics || typeof lyrics !== 'string') {
@@ -1132,18 +1491,89 @@ const getEnhancedRhymeData = (phoneticString) => {
   };
 };
 
-  // Statistics
+  // Add new state for song selection
+  const [selectedStatsFilter, setSelectedStatsFilter] = useState('all');
+
+  // Reset stats filter when songs change
+  useEffect(() => {
+    if (songs.length === 0) {
+      setSelectedStatsFilter('all');
+    } else if (selectedStatsFilter !== 'all') {
+      // Check if selected song still exists
+      const selectedSongExists = songs.some(song => song.id.toString() === selectedStatsFilter);
+      if (!selectedSongExists) {
+        setSelectedStatsFilter('all');
+      }
+    }
+  }, [songs, selectedStatsFilter]);
+  
+  // Enhanced statistics with song filtering
   const stats = useMemo(() => {
-    const totalWords = songs.reduce((sum, song) => sum + song.wordCount, 0);
-    const allWords = songs.flatMap(song => 
+    // Filter songs based on selection
+    const filteredSongs = selectedStatsFilter === 'all' 
+      ? songs 
+      : songs.filter(song => song.id.toString() === selectedStatsFilter);
+    
+    if (filteredSongs.length === 0) {
+      return {
+        totalSongs: 0,
+        totalWords: 0,
+        uniqueWords: 0,
+        mostUsedWords: [],
+        syllableDistribution: {},
+        wordLengthDistribution: {},
+        averageWordsPerSong: 0,
+        averageLinesPerSong: 0,
+        averageWordLength: 0,
+        averageSyllablesPerWord: 0,
+        totalLines: 0,
+        readingLevel: 0,
+        vocabularyComplexity: 0,
+        rhymeStats: {
+          totalRhymableWords: 0,
+          perfectRhymes: 0,
+          nearRhymes: 0,
+          soundsLike: 0,
+          internalRhymes: 0,
+          rhymeDensity: 0,
+          allRhymeGroups: []
+        }
+      };
+    }
+
+    // Calculate basic metrics first
+    const totalWords = filteredSongs.reduce((sum, song) => sum + song.wordCount, 0);
+    const allWords = filteredSongs.flatMap(song => 
       song.lyrics.toLowerCase().split(/\s+/).filter(word => word.match(/[a-zA-Z]/))
     );
     
     const wordFreq = {};
+    const syllableCount = {};
+    const wordLengthCount = {};
+    let totalSyllables = 0;
+    let totalCharacters = 0;
+    let validWordCount = 0;
+
     allWords.forEach(word => {
       const cleanWord = word.replace(/[^\w]/g, '');
-      if (cleanWord.length > 2) {
-        wordFreq[cleanWord] = (wordFreq[cleanWord] || 0) + 1;
+      if (cleanWord.length > 0) {
+        validWordCount++;
+        totalCharacters += cleanWord.length;
+        
+        // Word frequency
+        if (cleanWord.length > 2) {
+          wordFreq[cleanWord] = (wordFreq[cleanWord] || 0) + 1;
+        }
+        
+        // Syllable distribution
+        const syllables = countSyllables(cleanWord);
+        totalSyllables += syllables;
+        const syllableKey = syllables > 4 ? '5+' : syllables.toString();
+        syllableCount[syllableKey] = (syllableCount[syllableKey] || 0) + 1;
+        
+        // Word length distribution
+        const lengthKey = cleanWord.length > 10 ? '11+' : cleanWord.length.toString();
+        wordLengthCount[lengthKey] = (wordLengthCount[lengthKey] || 0) + 1;
       }
     });
 
@@ -1151,13 +1581,72 @@ const getEnhancedRhymeData = (phoneticString) => {
       .sort(([,a], [,b]) => b - a)
       .slice(0, 10);
 
+    // Calculate line statistics
+    const allLines = filteredSongs.flatMap(song => 
+      song.lyrics.split('\n').filter(line => line.trim().length > 0)
+    );
+    const totalLines = allLines.length;
+
+    // Calculate advanced stats
+    const avgReadingLevel = filteredSongs.length > 0 ? 
+      filteredSongs.reduce((sum, song) => sum + calculateReadingLevel(song.lyrics), 0) / filteredSongs.length : 0;
+    
+    const avgVocabularyComplexity = filteredSongs.length > 0 ? 
+      filteredSongs.reduce((sum, song) => sum + calculateVocabularyComplexity(song.lyrics, wordFreq), 0) / filteredSongs.length : 0;
+    
+    // Calculate rhyme statistics
+    const combinedRhymeStats = filteredSongs.length > 0 ? 
+      filteredSongs.reduce((acc, song) => {
+        const songRhymes = analyzeRhymeStatistics(song.lyrics, songVocabularyPhoneticMap);
+        return {
+          totalRhymableWords: acc.totalRhymableWords + songRhymes.totalRhymableWords,
+          perfectRhymes: acc.perfectRhymes + songRhymes.perfectRhymes,
+          nearRhymes: acc.nearRhymes + songRhymes.nearRhymes,
+          soundsLike: acc.soundsLike + songRhymes.soundsLike,
+          internalRhymes: acc.internalRhymes + songRhymes.internalRhymes,
+          rhymeDensity: acc.rhymeDensity + songRhymes.rhymeDensity,
+          allRhymeGroups: [...acc.allRhymeGroups, ...songRhymes.rhymeGroups]
+        };
+      }, {
+        totalRhymableWords: 0,
+        perfectRhymes: 0,
+        nearRhymes: 0,
+        soundsLike: 0,
+        internalRhymes: 0,
+        rhymeDensity: 0,
+        allRhymeGroups: []
+      }) : {
+        totalRhymableWords: 0,
+        perfectRhymes: 0,
+        nearRhymes: 0,
+        soundsLike: 0,
+        internalRhymes: 0,
+        rhymeDensity: 0,
+        allRhymeGroups: []
+      };
+
+    // Average the rhyme density if multiple songs
+    if (filteredSongs.length > 1) {
+      combinedRhymeStats.rhymeDensity = combinedRhymeStats.rhymeDensity / filteredSongs.length;
+    }
+
     return {
-      totalSongs: songs.length,
+      totalSongs: filteredSongs.length,
       totalWords,
       uniqueWords: Object.keys(wordFreq).length,
-      mostUsedWords
+      mostUsedWords,
+      syllableDistribution: syllableCount,
+      wordLengthDistribution: wordLengthCount,
+      averageWordsPerSong: filteredSongs.length > 0 ? Math.round(totalWords / filteredSongs.length) : 0,
+      averageLinesPerSong: filteredSongs.length > 0 ? Math.round(totalLines / filteredSongs.length) : 0,
+      averageWordLength: validWordCount > 0 ? (totalCharacters / validWordCount).toFixed(1) : 0,
+      averageSyllablesPerWord: validWordCount > 0 ? (totalSyllables / validWordCount).toFixed(1) : 0,
+      totalLines,
+      readingLevel: avgReadingLevel,
+      vocabularyComplexity: avgVocabularyComplexity,
+      rhymeStats: combinedRhymeStats
     };
-  }, [songs]);
+  }, [songs, selectedStatsFilter, songs.length]);
 
   // Clean highlight function with exact match support
   const highlightText = (text, query, isExactMatch = false) => {
@@ -1272,6 +1761,178 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
         </div>
       ))}
     </pre>
+  );
+};
+
+const RhymeGroupsDisplay = ({ rhymeGroups, darkMode, onWordClick }) => {
+  const [showAllGroups, setShowAllGroups] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+
+  // Helper function to convert phonetic code to readable rhyme pattern
+  const formatRhymeSound = (phoneticCode, wordsInGroup) => {
+    if (!phoneticCode || !wordsInGroup || wordsInGroup.length === 0) return 'Unknown';
+    
+    // Group words by actual rhyming sound rather than just spelling
+    const soundGroups = new Map();
+    
+    wordsInGroup.forEach(word => {
+      const lowerWord = word.toLowerCase();
+      let soundGroup = null;
+      
+      // Group by rhyming sound families (how they actually sound, not just spelling)
+      if (['ake', 'ape', 'ate', 'ain', 'aint', 'ane'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'ay-sound'; // make, take, shape, paint, chain, dates
+      }
+      else if (['ine', 'ime', 'ike', 'ight', 'ite', 'ide'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'i-sound'; // time, line, mind, kind, live, trite, unite, alike
+      }
+      else if (['oom', 'ew', 'ue', 'oo'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'oo-sound'; // boom, grew, food
+      }
+      else if (['ort', 'orse', 'orce', 'ourt'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'or-sound'; // short, force, court
+      }
+      else if (['ed', 'est', 'et', 'ess'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'e-sound'; // best, stress, created, emitted
+      }
+      else if (['ly', 'y'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'y-sound'; // collectively, endlessly
+      }
+      else if (['tion', 'sion', 'ous', 'us'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'shun-sound'; // conditions, relations
+      }
+      else if (['ing', 'ling', 'ning', 'ting'].some(ending => lowerWord.endsWith(ending))) {
+        soundGroup = 'ing-sound';
+      }
+      else {
+        // Fallback to simple ending
+        const ending = lowerWord.slice(-1);
+        soundGroup = `${ending}-sound`;
+      }
+      
+      if (soundGroup) {
+        soundGroups.set(soundGroup, (soundGroups.get(soundGroup) || 0) + 1);
+      }
+    });
+
+    // Get the most common sound groups
+    const significantSounds = Array.from(soundGroups.entries())
+      .filter(([, count]) => count >= 2 || wordsInGroup.length <= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([sound]) => sound);
+
+    if (significantSounds.length === 0) {
+      return 'similar sound';
+    }
+
+    // Create readable labels
+    const readableLabels = significantSounds.map(sound => {
+      if (sound === 'ay-sound') return '-ape, -ake, -ain';
+      if (sound === 'i-sound') return '-ine, -ime, -ike';
+      if (sound === 'oo-sound') return '-oom, -ew';
+      if (sound === 'or-sound') return '-ort, -orce';
+      if (sound === 'e-sound') return '-ed, -est';
+      if (sound === 'y-sound') return '-ly';
+      if (sound === 'shun-sound') return '-tion, -sion';
+      if (sound === 'ing-sound') return '-ing';
+      return sound.replace('-sound', '');
+    });
+
+    if (readableLabels.length === 1) {
+      return `${readableLabels[0]} sounds`;
+    } else {
+      return `${readableLabels.join(', ')} sounds`;
+    }
+  };
+
+  const toggleGroupExpansion = (groupIndex) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupIndex)) {
+      newExpanded.delete(groupIndex);
+    } else {
+      newExpanded.add(groupIndex);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const displayedGroups = showAllGroups ? rhymeGroups : rhymeGroups.slice(0, 6);
+
+  return (
+    <div className="space-y-3">
+      {displayedGroups.map((group, index) => {
+        const isExpanded = expandedGroups.has(index);
+        const wordsToShow = isExpanded ? group.words : group.words.slice(0, 8);
+        const hasMoreWords = group.words.length > 8;
+        
+        return (
+          <div key={index} className={`p-3 rounded border ${
+            darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              {group.count} words with {formatRhymeSound(group.rhymeSound, group.words)}
+            </div>
+            <div className="flex flex-wrap gap-1 items-center">
+              {wordsToShow.map((word, wordIndex) => (
+                <button
+                  key={wordIndex}
+                  onClick={() => onWordClick(word)}
+                  className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
+                      : 'bg-white hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {word}
+                </button>
+              ))}
+              {hasMoreWords && !isExpanded && (
+                <button
+                  onClick={() => toggleGroupExpansion(index)}
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 hover:bg-gray-500 text-blue-300' 
+                      : 'bg-gray-200 hover:bg-gray-300 text-blue-600'
+                  }`}
+                >
+                  +{group.words.length - 8} more
+                </button>
+              )}
+              {hasMoreWords && isExpanded && (
+                <button
+                  onClick={() => toggleGroupExpansion(index)}
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 hover:bg-gray-500 text-blue-300' 
+                      : 'bg-gray-200 hover:bg-gray-300 text-blue-600'
+                  }`}
+                >
+                  Show less
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      
+      {rhymeGroups.length > 6 && (
+        <div className="text-center">
+          <button
+            onClick={() => setShowAllGroups(!showAllGroups)}
+            className={`px-4 py-2 rounded transition-colors ${
+              darkMode 
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            {showAllGroups 
+              ? 'Show Less Groups' 
+              : `Show ${rhymeGroups.length - 6} More Groups`
+            }
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -2302,18 +2963,44 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
            {/* Stats Tab */}
            {activeTab === 'stats' && (
              <div className="space-y-6">
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <div className={`rounded-lg border p-6 transition-colors ${
+               {/* Song Selection Dropdown */}
+               <div className={`rounded-lg border p-4 transition-colors ${
+                 darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+               }`}>
+                 <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                   Analyze Statistics For:
+                 </label>
+                 <select
+                   value={selectedStatsFilter}
+                   onChange={(e) => setSelectedStatsFilter(e.target.value)}
+                   className={`w-full max-w-md p-2 rounded border ${
+                     darkMode 
+                       ? 'bg-gray-700 border-gray-600 text-white' 
+                       : 'bg-white border-gray-300 text-gray-900'
+                   }`}
+                 >
+                   <option value="all">All Songs ({songs.length} songs)</option>
+                   {songs.map(song => (
+                     <option key={song.id} value={song.id.toString()}>
+                       {song.title}
+                     </option>
+                   ))}
+                 </select>
+               </div>
+
+               {/* Basic Overview Stats */}
+               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                 <div className={`rounded-lg border p-4 text-center transition-colors ${
                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                  }`}>
                    <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                      {stats.totalSongs}
                    </div>
                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                     Total Songs
+                     {selectedStatsFilter === 'all' ? 'Total Songs' : 'Selected Song'}
                    </div>
                  </div>
-                 <div className={`rounded-lg border p-6 transition-colors ${
+                 <div className={`rounded-lg border p-4 text-center transition-colors ${
                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                  }`}>
                    <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -2323,7 +3010,7 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
                      Total Words
                    </div>
                  </div>
-                 <div className={`rounded-lg border p-6 transition-colors ${
+                 <div className={`rounded-lg border p-4 text-center transition-colors ${
                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                  }`}>
                    <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -2333,8 +3020,256 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
                      Unique Words
                    </div>
                  </div>
+                 <div className={`rounded-lg border p-4 text-center transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <div className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     {stats.totalWords > 0 ? ((stats.uniqueWords / stats.totalWords) * 100).toFixed(1) : 0}%
+                   </div>
+                   <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                     Vocabulary Richness
+                   </div>
+                 </div>
                </div>
 
+               {/* Structure & Composition Stats */}
+               <div className={`rounded-lg border p-6 transition-colors ${
+                 darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+               }`}>
+                 <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                   Structure & Composition
+                 </h3>
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                   <div className="text-center">
+                     <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.averageLinesPerSong}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Avg Lines Per Song
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.averageWordsPerSong}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Avg Words Per Song
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.averageWordLength}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Avg Word Length
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.averageSyllablesPerWord}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Avg Syllables Per Word
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Syllable Distribution */}
+               <div className={`rounded-lg border p-6 transition-colors ${
+                 darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+               }`}>
+                 <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                   Syllable Distribution
+                 </h3>
+                 <div className="space-y-3">
+                   {Object.entries(stats.syllableDistribution)
+                     .sort(([a], [b]) => {
+                       if (a === '5+') return 1;
+                       if (b === '5+') return -1;
+                       return parseInt(a) - parseInt(b);
+                     })
+                     .map(([syllables, count]) => {
+                       const percentage = stats.totalWords > 0 ? (count / stats.totalWords * 100).toFixed(1) : 0;
+                       return (
+                         <div key={syllables} className="flex items-center justify-between">
+                           <div className="flex items-center w-1/3">
+                             <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                               {syllables} syllable{syllables !== '1' ? 's' : ''}
+                             </span>
+                           </div>
+                           <div className="flex-1 mx-4">
+                             <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                               <div 
+                                 className="h-2 rounded-full bg-blue-500"
+                                 style={{ width: `${Math.min(100, percentage * 2)}%` }}
+                               ></div>
+                             </div>
+                           </div>
+                           <div className={`text-sm w-20 text-right ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                             {count} ({percentage}%)
+                           </div>
+                         </div>
+                       );
+                     })}
+                 </div>
+               </div>
+
+               {/* Word Length Distribution */}
+               <div className={`rounded-lg border p-6 transition-colors ${
+                 darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+               }`}>
+                 <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                   Word Length Distribution
+                 </h3>
+                 <div className="space-y-3">
+                   {Object.entries(stats.wordLengthDistribution)
+                     .sort(([a], [b]) => {
+                       if (a === '11+') return 1;
+                       if (b === '11+') return -1;
+                       return parseInt(a) - parseInt(b);
+                     })
+                     .map(([length, count]) => {
+                       const percentage = stats.totalWords > 0 ? (count / stats.totalWords * 100).toFixed(1) : 0;
+                       return (
+                         <div key={length} className="flex items-center justify-between">
+                           <div className="flex items-center w-1/3">
+                             <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                               {length} character{length !== '1' ? 's' : ''}
+                             </span>
+                           </div>
+                           <div className="flex-1 mx-4">
+                             <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                               <div 
+                                 className="h-2 rounded-full bg-green-500"
+                                 style={{ width: `${Math.min(100, percentage * 2)}%` }}
+                               ></div>
+                             </div>
+                           </div>
+                           <div className={`text-sm w-20 text-right ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                             {count} ({percentage}%)
+                           </div>
+                         </div>
+                       );
+                     })}
+                 </div>
+               </div>
+{/* Reading Level & Complexity */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     Reading Level
+                   </h3>
+                   <div className="text-center">
+                     <div className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.readingLevel.toFixed(1)}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Flesch-Kincaid Grade Level
+                     </div>
+                     <div className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                       {stats.readingLevel < 6 ? 'Elementary' :
+                        stats.readingLevel < 9 ? 'Middle School' :
+                        stats.readingLevel < 13 ? 'High School' :
+                        stats.readingLevel < 16 ? 'College' : 'Graduate'}
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className={`rounded-lg border p-6 transition-colors ${
+                   darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                 }`}>
+                   <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                     Vocabulary Complexity
+                   </h3>
+                   <div className="text-center">
+                     <div className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       {stats.vocabularyComplexity.toFixed(1)}
+                     </div>
+                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Complexity Score
+                     </div>
+                     <div className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                       {stats.vocabularyComplexity < 2 ? 'Simple' :
+                        stats.vocabularyComplexity < 3 ? 'Moderate' :
+                        stats.vocabularyComplexity < 4 ? 'Complex' : 'Very Complex'}
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Rhyme Analysis */}
+               <div className={`rounded-lg border p-6 transition-colors ${
+                 darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+               }`}>
+                 <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                   Rhyme Analysis
+                 </h3>
+                 
+                 {/* Rhyme Stats Grid */}
+                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                   <div className="text-center">
+                     <div className={`text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                       {stats.rhymeStats.perfectRhymes}
+                     </div>
+                     <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Perfect Rhymes
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-2xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                       {stats.rhymeStats.nearRhymes}
+                     </div>
+                     <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Near Rhymes
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-2xl font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                       {stats.rhymeStats.soundsLike}
+                     </div>
+                     <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Sounds Like
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-2xl font-bold ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                       {stats.rhymeStats.internalRhymes}
+                     </div>
+                     <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Internal Rhymes
+                     </div>
+                   </div>
+                   <div className="text-center">
+                     <div className={`text-2xl font-bold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                       {stats.rhymeStats.rhymeDensity.toFixed(1)}%
+                     </div>
+                     <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                       Rhyme Density
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* Top Rhyme Groups */}
+                 {stats.rhymeStats.allRhymeGroups.length > 0 && (
+                   <div>
+                     <h4 className={`text-md font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                       Top Rhyme Groups
+                     </h4>
+                     <RhymeGroupsDisplay 
+                       rhymeGroups={stats.rhymeStats.allRhymeGroups}
+                       darkMode={darkMode}
+                       onWordClick={(word) => {
+                         handleSearch(word);
+                         setActiveTab('search');
+                       }}
+                     />
+                   </div>
+                 )}
+               </div>
+               {/* Most Used Words - Enhanced */}
                {stats.mostUsedWords.length > 0 && (
                  <div className={`rounded-lg border p-6 transition-colors ${
                    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
@@ -2343,26 +3278,32 @@ const HighlightedLyrics = ({ structuredLyrics, darkMode }) => {
                      Most Used Words
                    </h3>
                    <div className="space-y-2">
-                     {stats.mostUsedWords.map(([word, count], index) => (
-                       <div key={word} className="flex items-center justify-between">
-                         <div className="flex items-center">
-                           <span className={`text-sm w-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                             {index + 1}.
-                           </span>
-                           <button
-                             onClick={() => handleSearch(word)}
-                             className={`underline transition-colors ${
-                               darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
-                             }`}
-                           >
-                             {word}
-                           </button>
+                     {stats.mostUsedWords.map(([word, count], index) => {
+                       const percentage = stats.totalWords > 0 ? (count / stats.totalWords * 100).toFixed(2) : 0;
+                       return (
+                         <div key={word} className="flex items-center justify-between">
+                           <div className="flex items-center">
+                             <span className={`text-sm w-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                               {index + 1}.
+                             </span>
+                             <button
+                               onClick={() => {
+                                 handleSearch(word);
+                                 setActiveTab('search');
+                               }}
+                               className={`underline transition-colors ${
+                                 darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
+                               }`}
+                             >
+                               {word}
+                             </button>
+                           </div>
+                           <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                             {count} times ({percentage}%)
+                           </div>
                          </div>
-                         <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                           {count} times
-                         </span>
-                       </div>
-                     ))}
+                       );
+                     })}
                    </div>
                  </div>
                )}
