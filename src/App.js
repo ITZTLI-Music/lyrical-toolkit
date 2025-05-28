@@ -64,7 +64,6 @@ const LyricsSearchApp = () => {
 
   // Manual states
   const [showManual, setShowManual] = useState(false);
-  const [manualContent, setManualContent] = useState('');
   const [exampleSongDeleted, setExampleSongDeleted] = useState(false);
 
   // Stats filter
