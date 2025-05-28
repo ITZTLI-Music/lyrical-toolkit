@@ -6,8 +6,6 @@ const Header = ({
   setActiveTab, 
   showManual, 
   setShowManual, 
-  loadManual, 
-  manualContent, 
   darkMode, 
   setDarkMode 
 }) => {
@@ -76,9 +74,6 @@ const Header = ({
             <button
               onClick={() => {
                 setShowManual(!showManual);
-                if (!showManual && !manualContent) {
-                  loadManual();
-                }
               }}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 showManual

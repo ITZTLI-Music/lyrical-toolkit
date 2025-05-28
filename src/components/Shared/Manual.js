@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 
 const Manual = ({ showManual, onClose, darkMode }) => {
   const [manualContent, setManualContent] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
 
-  // Load manual content
-  const loadManual = async () => {
+  // Load manual content - wrapped in useCallback to prevent dependency issues
+  const loadManual = useCallback(async () => {
     if (manualContent) return; // Already loaded
     
     setManualLoading(true);
@@ -23,7 +23,7 @@ const Manual = ({ showManual, onClose, darkMode }) => {
       setManualContent('Error loading manual content.');
     }
     setManualLoading(false);
-  };
+  }, [manualContent]);
 
   useEffect(() => {
     if (showManual && !manualContent) {

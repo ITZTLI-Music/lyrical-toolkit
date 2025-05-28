@@ -126,24 +126,6 @@ const LyricsSearchApp = () => {
     }
   }, [songs.length, exampleSongDeleted]);
 
-  // Load manual content
-  const loadManual = async () => {
-    if (manualContent) return;
-    
-    try {
-      const response = await fetch('/MANUAL.txt');
-      if (response.ok) {
-        const content = await response.text();
-        setManualContent(content);
-      } else {
-        setManualContent('Manual content could not be loaded.');
-      }
-    } catch (error) {
-      console.error('Failed to load manual:', error);
-      setManualContent('Error loading manual content.');
-    }
-  };
-
   // Reset stats filter when songs change
   useEffect(() => {
     if (songs.length === 0) {
