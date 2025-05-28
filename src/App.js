@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Upload, FileText, BarChart3, X, Plus, Moon, Sun, Book, Shuffle, Music, Trash2 } from 'lucide-react';
+import { Search, Book, Shuffle, Music } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
 // Import utilities
-import { STOP_WORDS } from './utils/constants';
 import { 
   countSyllables, 
   calculateReadingLevel, 
-  calculateVocabularyComplexity, 
-  analyzeMeter, 
-  generateRhymingDictionary, 
-  generateWordFrequencyReport, 
-  highlightText 
+  calculateVocabularyComplexity
 } from './utils/textAnalysis';
-import { analyzeRhymeStatistics, analyzeFullTextRhymes } from './utils/phoneticUtils';
+import { analyzeRhymeStatistics } from './utils/phoneticUtils';
 import { songVocabularyPhoneticMap } from './data/songVocabularyPhoneticMap';
 
 // Import hooks
@@ -70,7 +65,6 @@ const LyricsSearchApp = () => {
   // Manual states
   const [showManual, setShowManual] = useState(false);
   const [manualContent, setManualContent] = useState('');
-  const [manualLoading, setManualLoading] = useState(false);
   const [exampleSongDeleted, setExampleSongDeleted] = useState(false);
 
   // Stats filter
@@ -136,7 +130,6 @@ const LyricsSearchApp = () => {
   const loadManual = async () => {
     if (manualContent) return;
     
-    setManualLoading(true);
     try {
       const response = await fetch('/MANUAL.txt');
       if (response.ok) {
@@ -149,7 +142,6 @@ const LyricsSearchApp = () => {
       console.error('Failed to load manual:', error);
       setManualContent('Error loading manual content.');
     }
-    setManualLoading(false);
   };
 
   // Reset stats filter when songs change
@@ -458,8 +450,6 @@ const LyricsSearchApp = () => {
         setActiveTab={setActiveTab}
         showManual={showManual}
         setShowManual={setShowManual}
-        loadManual={loadManual}
-        manualContent={manualContent}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />

@@ -1,5 +1,3 @@
-import { STOP_WORDS } from './constants';
-
 // Improved syllable counter
 export const countSyllables = (word) => {
   if (!word || typeof word !== 'string') return 0;
@@ -331,7 +329,6 @@ const identifyMeter = (stresses) => {
     return { type: 'insufficient', confidence: 0 };
   }
   
-  const pattern = stresses.join('');
   const length = stresses.length;
   
   // Convert to binary for pattern matching (1 = stressed, 0 = unstressed)
@@ -653,7 +650,6 @@ const getWeakWordSuggestion = (weakWord) => {
 export const detectCliches = (lyrics) => {
   if (!lyrics || typeof lyrics !== 'string') return [];
   
-  const lowerLyrics = lyrics.toLowerCase();
   const clicheInstances = [];
   
   CLICHE_PHRASES.forEach(cliche => {

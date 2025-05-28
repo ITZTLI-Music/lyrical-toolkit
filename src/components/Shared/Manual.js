@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Book } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const Manual = ({ showManual, onClose, darkMode }) => {
   const [manualContent, setManualContent] = useState('');
@@ -29,7 +29,7 @@ const Manual = ({ showManual, onClose, darkMode }) => {
     if (showManual && !manualContent) {
       loadManual();
     }
-  }, [showManual, manualContent]);
+  }, [showManual, manualContent, loadManual]);
 
   if (!showManual) return null;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Upload, FileText, BarChart3, Book, Shuffle, Music, Moon, Sun } from 'lucide-react';
+import { Search, Upload, BarChart3, Book, Shuffle, Music, Moon, Sun } from 'lucide-react';
 
 const Header = ({ 
   activeTab, 

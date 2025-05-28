@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export const useSearch = (songs, searchQuery, highlightWord) => {
   // Enhanced search functionality - group by verse/paragraph
