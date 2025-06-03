@@ -52,8 +52,7 @@ const FloatingNotepad = ({
             // Expanded: Floating window
             bottom: '20px',
             right: '20px',
-            left: 'auto', // Ensure left positioning doesn't interfere
-            width: `${Math.min(dimensions.width, window.innerWidth - 40)}px`, // Responsive width
+            width: `${dimensions.width}px`,
             height: `${dimensions.height}px`,
             borderRadius: '8px',
             resize: 'both',
