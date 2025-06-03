@@ -73,7 +73,7 @@ const UploadTab = ({
               onClick={onDeleteAllSongs}
               className={`px-3 py-1 rounded text-sm transition-colors ${
                 darkMode 
-                  ? 'bg-red-800 hover:bg-red-700 text-red-200' 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                   : 'bg-red-600 hover:bg-red-700 text-white'
               }`}
             >
@@ -112,8 +112,8 @@ const UploadTab = ({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onSongSelect(song)}
-                      className={`text-sm underline transition-colors ${
-                        darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                      className={`text-sm px-3 py-1 rounded transition-colors ${
+                        darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                       }`}
                     >
                       View
@@ -122,7 +122,7 @@ const UploadTab = ({
                       onClick={() => onDeleteSong(song.id)}
                       className={`p-1 rounded transition-colors ${
                         darkMode 
-                          ? 'text-red-400 hover:bg-red-900 hover:text-red-300' 
+                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                           : 'text-red-500 hover:bg-red-50 hover:text-red-700'
                       }`}
                       title="Delete song"

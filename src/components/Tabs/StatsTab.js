@@ -337,8 +337,8 @@ const StatsTab = ({
                     </span>
                     <button
                       onClick={() => onSearchInLyrics(word)}
-                      className={`underline transition-colors ${
-                        darkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-600'
+                      className={`px-2 py-1 rounded transition-colors ${
+                        darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                       }`}
                     >
                       {word}

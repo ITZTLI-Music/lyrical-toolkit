@@ -16,11 +16,12 @@ const Header = ({
           <div className="flex items-center gap-4 mobile-title">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors dark-mode-toggle ${
                 darkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
+                  ? 'bg-gray-700 hover:bg-gray-600' 
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
               }`}
+              style={darkMode ? { color: 'white' } : {}}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

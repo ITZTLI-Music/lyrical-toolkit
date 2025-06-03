@@ -2,6 +2,7 @@ import React from 'react';
 import { generateRhymingDictionary, analyzeMeter, analyzeMeterPatterns, calculateFlowConsistency, analyzeRhythmVariation, performWritingQualityAnalysis } from '../../utils/textAnalysis';
 import { analyzeFullTextRhymes } from '../../utils/phoneticUtils';
 import { songVocabularyPhoneticMap } from '../../data/songVocabularyPhoneticMap';
+import geminiService from '../../services/geminiService';
 import HighlightedLyrics from '../Analysis/HighlightedLyrics';
 
 const AnalysisTab = ({ 
@@ -299,20 +300,25 @@ const AnalysisTab = ({
              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Rhymes...</div>
           )}
 
-          {analysisType === 'rhyme-scheme' && (
+          {analysisType === 'rhyme-scheme' && analysisResults && (
             <div>
               <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Rhyme Analysis: "{analysisResults.song.title}"
+                Rhyme Analysis: "{analysisResults.song?.title || 'Unknown Song'}"
               </h3>
+              
+              {/* Rhyme Visualization */}
               <div className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <HighlightedLyrics 
+                <h4 className={`text-md font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Rhyme Detection
+                </h4>
+                <HighlightedLyrics
                   structuredLyrics={analysisResults.structuredLyrics}
-                  darkMode={darkMode} 
+                  darkMode={darkMode}
                 />
               </div>
             </div>
           )}
-            
+          
           {analysisType === 'flow-rhythm-loading' && (
              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Flow & Rhythm...</div>
           )}
@@ -323,46 +329,7 @@ const AnalysisTab = ({
                 Flow & Rhythm Analysis: "{analysisResults.song.title}"
               </h3>
               
-              {/* Overall Scores */}
-              <div className="grid gap-4 md:grid-cols-3 mb-6">
-                <div className={`p-4 rounded border ${
-                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    analysisResults.flowConsistency >= 0.8 ? 'text-green-500' :
-                    analysisResults.flowConsistency >= 0.6 ? 'text-yellow-500' : 'text-red-500'
-                  }`}>
-                    {(analysisResults.flowConsistency * 100).toFixed(0)}%
-                  </div>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Flow Consistency
-                  </div>
-                </div>
-                <div className={`p-4 rounded border ${
-                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {analysisResults.rhythmVariation?.sections || 0}
-                  </div>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Sections Detected
-                  </div>
-                </div>
-                <div className={`p-4 rounded border ${
-                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    analysisResults.rhythmVariation?.variation === 'low' ? 'text-blue-500' :
-                    analysisResults.rhythmVariation?.variation === 'moderate' ? 'text-yellow-500' : 'text-purple-500'
-                  }`}>
-                    {analysisResults.rhythmVariation?.variation === 'low' ? 'Low' :
-                     analysisResults.rhythmVariation?.variation === 'moderate' ? 'Med' : 'High'}
-                  </div>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Rhythm Variation
-                  </div>
-                </div>
-              </div>
+              {/* Skip the Overall Scores section that was showing NaN% */}
 
               {/* Rhythm Variation Summary */}
               {analysisResults.rhythmVariation && (
@@ -417,6 +384,7 @@ const AnalysisTab = ({
               )}
             </div>
           )}
+
           {analysisType === 'writing-quality-loading' && (
              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Writing Quality...</div>
           )}

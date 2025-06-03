@@ -15,6 +15,7 @@ import { songVocabularyPhoneticMap } from './data/songVocabularyPhoneticMap';
 import { useSearchHistory, useDarkMode, useHighlightWord } from './hooks/useLocalStorage';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useSearch } from './hooks/useSearch';
+import { useNotepad } from './hooks/useNotepad';
 
 // Import components
 import Header from './components/Header/Header';
@@ -27,6 +28,7 @@ import RhymesTab from './components/Tabs/RhymesTab';
 import AnalysisTab from './components/Tabs/AnalysisTab';
 import UploadTab from './components/Tabs/UploadTab';
 import StatsTab from './components/Tabs/StatsTab';
+import FloatingNotepad from './components/Notepad/FloatingNotepad';
 
 /* eslint-disable react-hooks/exhaustive-deps */
 
@@ -74,6 +76,9 @@ const LyricsSearchApp = () => {
   
   // Search hook
   const { searchResults } = useSearch(songs, searchQuery, highlightWord);
+
+  //Notepad hook
+  const notepadState = useNotepad();
 
   // Load example song
   const loadingExampleRef = useRef(false);
@@ -419,6 +424,41 @@ const LyricsSearchApp = () => {
     }
   };
 
+  // Add these new functions here
+  const handleExportTxt = () => {
+    if (!notepadState.content.trim()) return;
+    
+    const blob = new Blob([notepadState.content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${notepadState.title || 'Untitled'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUploadToSongs = () => {
+    if (!notepadState.content.trim()) return;
+    
+    const newSong = {
+      id: Date.now() + Math.random(),
+      title: notepadState.title || 'Untitled',
+      lyrics: notepadState.content,
+      wordCount: notepadState.content.split(/\s+/).filter(word => word.length > 0).length,
+      dateAdded: new Date().toISOString(),
+      filename: `${notepadState.title || 'Untitled'}.txt`,
+      fromNotepad: true
+    };
+    
+    setSongs(prev => [newSong, ...prev]);
+    
+    // Optionally clear the notepad after uploading
+    // notepadState.updateContent('');
+    // notepadState.updateTitle('Untitled');
+  };
+
   const themeClasses = darkMode 
     ? 'dark bg-gray-900 text-white' 
     : 'bg-gray-50 text-gray-900';
@@ -495,7 +535,7 @@ const LyricsSearchApp = () => {
                 }
                 className={`px-6 py-2 rounded-lg transition-colors ${
                   darkMode 
-                    ? 'bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700' 
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 disabled:bg-gray-800' 
                     : 'bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-400'
                 }`}
               >
@@ -638,6 +678,14 @@ const LyricsSearchApp = () => {
         onClose={() => setSelectedSong(null)}
         highlightWord={highlightWord}
         darkMode={darkMode}
+      />
+
+      {/* Add the FloatingNotepad here */}
+      <FloatingNotepad
+        notepadState={notepadState}
+        darkMode={darkMode}
+        onExportTxt={handleExportTxt}
+        onUploadToSongs={handleUploadToSongs}
       />
     </div>
   );

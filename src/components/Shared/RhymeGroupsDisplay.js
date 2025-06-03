@@ -115,7 +115,7 @@ const RhymeGroupsDisplay = ({ rhymeGroups, darkMode, onWordClick }) => {
                   onClick={() => onWordClick(word)}
                   className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
                     darkMode 
-                      ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                       : 'bg-white hover:bg-gray-100 text-gray-700'
                   }`}
                 >
@@ -127,7 +127,7 @@ const RhymeGroupsDisplay = ({ rhymeGroups, darkMode, onWordClick }) => {
                   onClick={() => toggleGroupExpansion(index)}
                   className={`text-xs px-2 py-1 rounded transition-colors ${
                     darkMode 
-                      ? 'bg-gray-600 hover:bg-gray-500 text-blue-300' 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                       : 'bg-gray-200 hover:bg-gray-300 text-blue-600'
                   }`}
                 >
@@ -155,7 +155,7 @@ const RhymeGroupsDisplay = ({ rhymeGroups, darkMode, onWordClick }) => {
         <div className="text-center">
           <button
             onClick={() => setShowAllGroups(!showAllGroups)}
-            className={`px-4 py-2 rounded transition-colors ${
+            className={`text-xs px-2 py-1 rounded transition-colors ${
               darkMode 
                 ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
