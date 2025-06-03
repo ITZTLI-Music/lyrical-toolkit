@@ -49,17 +49,19 @@ const FloatingNotepad = ({
               marginRight: '16px' // Add right margin
             }
           : {
-              // Expanded: Floating window
-              bottom: '20px',
-              right: '20px',
-              width: `${dimensions.width}px`,
-              height: `${dimensions.height}px`,
-              borderRadius: '8px',
-              resize: 'both',
-              overflow: 'hidden',
-              minWidth: '200px',
-              minHeight: '200px'
-            }
+            // Expanded: Floating window
+            bottom: '20px',
+            right: '20px',
+            left: 'auto', // Ensure left positioning doesn't interfere
+            width: `${Math.min(dimensions.width, window.innerWidth - 40)}px`, // Responsive width
+            height: `${dimensions.height}px`,
+            borderRadius: '8px',
+            resize: 'both',
+            overflow: 'hidden',
+            minWidth: '200px',
+            minHeight: '200px',
+            maxWidth: 'calc(100vw - 40px)' // Prevent overflow on small screens
+          }
       }
     >
       {/* Header - Contains title and buttons */}
