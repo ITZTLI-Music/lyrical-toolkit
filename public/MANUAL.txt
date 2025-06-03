@@ -1,62 +1,144 @@
+User Manual
+
 GETTING STARTED
-Upload your .txt files using the Upload tab. Drag and drop files or click "Choose Files" to browse. The app supports multiple files at once and stores everything locally in your browser.
+Upload your .txt files using the Upload tab. Drag and drop files or click "Choose Files" to browse. The app supports multiple files at once and stores everything locally in your browser. An example song is loaded automatically to help you explore features.
+
 _______________
+
+FLOATING NOTEPAD
+A persistent notepad is available on every page for writing and brainstorming:
+- Click the notepad icon at the bottom of your screen to expand/minimize
+- Write lyrics, notes, or ideas - everything auto-saves as you type
+- Edit the title by clicking on "Untitled" when expanded
+- Export your notes as a .txt file for backup
+- Upload notepad content directly to your song collection
+- The notepad remembers your content between sessions
+
+_______________
+
 SEARCH TAB
 - Type any word or phrase to find where it appears in your lyrics
 - Use quotation marks for exact matches: "the way" vs the way
-- Click words in search results to view the full song
+- Results show verse context with highlighted matches
+- Click "View full song" to see complete lyrics
 - Recent searches are saved for quick access
-- Search results show verse context and match counts
+- Search results display match counts and line numbers
+
 _______________
+
 DICTIONARY TAB
 - Enter any word to get definitions, pronunciations, and parts of speech
-- Click "Search in lyrics" on definition results to find that word in your songs
-- Useful for exploring word meanings and finding better word choices
+- Click "Search in lyrics" to find that word in your songs
+- Results show multiple definitions and usage examples
+- Useful for exploring word meanings and finding better choices
+- Great for expanding your vocabulary while writing
+
 _______________
+
 SYNONYMS TAB
 - Find synonyms and antonyms for any word
-- Click any suggested word to search for rhymes or get its definition
-- Helps expand vocabulary and find alternative word choices
+- Click suggested words to search for rhymes or get definitions
+- Helps expand vocabulary and find alternative expressions
+- Discover fresh ways to express common ideas
+- Avoid repetitive word usage in your lyrics
+
 _______________
+
 RHYMES TAB
-- Perfect Rhymes: Words that rhyme exactly
-- Near Rhymes: Words with similar sounds (slant rhymes)
-- Sounds Like: Words with similar pronunciation
-- Click any rhyme suggestion to get its definition
-- Great for finding rhyming words when writing
+- Perfect Rhymes: Words that rhyme exactly (cat/bat, make/take)
+- Near Rhymes: Words with similar sounds (love/tough, mind/find)
+- Sounds Like: Words with similar pronunciation patterns
+- Click any rhyme to get its definition or search in lyrics
+- Essential tool for finding rhyming words when writing
+
 _______________
+
 ANALYSIS TAB
-Generate Reports:
-- Rhyming Dictionary: Creates rhyme groups from your lyrics
-- Word Frequency: Shows your most-used words with statistics
-- Quick Stats: Overview of your song collection
+Select any song from your collection for detailed analysis:
+
+Rhyming Dictionary: Generate rhyme groups from ALL your lyrics
+- Shows rhyming patterns across your entire collection
+- Click words to search for them in your songs
+- Discover your natural rhyming tendencies
+
+Rhyme Scheme Analysis: Visual rhyme highlighting for individual songs
+- Color-coded highlighting shows rhyming patterns
+- Each color represents a different rhyme group
+- Reveals internal rhymes and complex patterns you might miss
+
+Syllable Analysis: Count syllables and analyze meter
+- Shows syllable count for each line
+- Displays average syllables and word counts
+- Helps with rhythm and flow consistency
+
+Flow & Rhythm Analysis: Advanced rhythm pattern detection
+- Analyzes meter patterns and rhythm variation
+- Breaks down sections and their characteristics
+- Provides insights about rhythm consistency
+
+Writing Quality Analysis: Comprehensive writing assessment
+- Detects weak words (very, really, just, etc.)
+- Identifies clichés and overused phrases
+- Highlights power words that strengthen your writing
+- Provides quality score and improvement suggestions
+- Shows specific examples with line numbers
+
 _______________
-Analyze Individual Songs:
-- Rhyme Scheme: Highlights rhyming words with color coding
-- Syllables: Counts syllables per line and shows patterns
-_______________
+
 UPLOAD TAB
-- Manage your song collection
-- View word counts and upload dates
+- Manage your complete song collection
+- View word counts, upload dates, and file details
 - Delete individual songs or clear entire collection
 - Click "View" to see full lyrics with current highlighting
+- Example songs are marked for easy identification
+
 _______________
+
 STATS TAB
-- Total songs, words, and unique words in your collection
-- Most frequently used words across all lyrics
-- Click any word to search for it in your lyrics
+Comprehensive statistics about your lyrics:
+- Filter by individual song or view all songs combined
+- Basic metrics: total songs, words, unique words, vocabulary richness
+- Structure analysis: average lines/words per song, word length, syllables
+- Reading level and vocabulary complexity scores
+- Detailed rhyme statistics: perfect rhymes, near rhymes, internal rhymes
+- Most frequently used words (click to search)
+- Syllable and word length distributions
+- Rhyme density and quality analysis
+
 _______________
-TIPS
-- Use exact search ("quotes") to find specific phrases
-- The app remembers your searches and settings
-- All data stays in your browser - nothing is sent to servers
-- Try the rhyme scheme analysis to see your natural patterns
-- Word frequency shows your writing habits and style tendencies
+
+DARK MODE
+Toggle between light and dark themes using the moon/sun icon in the header. Your preference is saved automatically.
+
 _______________
-EXAMPLE USAGE
-1. Upload some lyrics files
-2. Search for a common word like "love" to see how often you use it
-3. Try the rhyme scheme analysis on a song to see patterns visually
-4. Use the dictionary to explore words you use frequently
-5. Find rhymes for words you want to use in new songs
+
+TIPS & BEST PRACTICES
+- Use exact search ("quotes") to find specific phrases or lyrics
+- The notepad is perfect for capturing ideas while analyzing existing songs
+- Try rhyme scheme analysis to discover patterns you naturally use
+- Word frequency analysis reveals your writing habits and style tendencies
+- Use writing quality analysis to identify areas for improvement
+- Stats tab helps track your progress and writing evolution
+- All data stays in your browser - nothing is sent to external servers
+- Export notepad content regularly as backup
+
 _______________
+
+EXAMPLE WORKFLOW
+1. Upload your lyrics collection or work with the example song
+2. Use the notepad to brainstorm new ideas while exploring features
+3. Search for common words like "love" or "time" to see usage patterns
+4. Analyze rhyme schemes to understand your natural patterns
+5. Check writing quality to identify improvement opportunities
+6. Use dictionary/synonyms/rhymes tabs while writing in the notepad
+7. Export finished work from notepad or upload it to your collection
+8. Review stats to track your writing development over time
+
+_______________
+
+TROUBLESHOOTING
+- If features aren't working, try refreshing the page
+- Large files may take a moment to process
+- For best results, use clean .txt files without special formatting
+- Your data persists between sessions but stays local to your browser
+- Clear your browser data if you want to reset everything
