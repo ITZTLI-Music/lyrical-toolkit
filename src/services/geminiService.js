@@ -142,4 +142,5 @@ CRITICAL: You must create a groupRating entry for each of the ${rhymeGroups.leng
   }
 }
 
-export default new GeminiService();
+const geminiServiceInstance = new GeminiService();
+export default geminiServiceInstance;

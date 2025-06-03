@@ -2,7 +2,6 @@ import React from 'react';
 import { generateRhymingDictionary, analyzeMeter, analyzeMeterPatterns, calculateFlowConsistency, analyzeRhythmVariation, performWritingQualityAnalysis } from '../../utils/textAnalysis';
 import { analyzeFullTextRhymes } from '../../utils/phoneticUtils';
 import { songVocabularyPhoneticMap } from '../../data/songVocabularyPhoneticMap';
-import geminiService from '../../services/geminiService';
 import HighlightedLyrics from '../Analysis/HighlightedLyrics';
 
 const AnalysisTab = ({ 
@@ -318,7 +317,7 @@ const AnalysisTab = ({
               </div>
             </div>
           )}
-          
+
           {analysisType === 'flow-rhythm-loading' && (
              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Flow & Rhythm...</div>
           )}
