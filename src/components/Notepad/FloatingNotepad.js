@@ -39,12 +39,14 @@ const FloatingNotepad = ({
               bottom: '0',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: '300px',
+              width: 'min(300px, calc(100vw - 32px))', // Responsive width with margins
               height: '40px',
               borderRadius: '8px 8px 0 0',
               borderBottom: 'none',
               resize: 'none',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              marginLeft: '16px', // Add left margin
+              marginRight: '16px' // Add right margin
             }
           : {
               // Expanded: Floating window
