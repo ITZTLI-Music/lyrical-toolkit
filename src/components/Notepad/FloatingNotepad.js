@@ -31,7 +31,7 @@ const FloatingNotepad = ({
         darkMode 
           ? 'bg-gray-800 border-gray-600' 
           : 'bg-white border-gray-300'
-      }`}
+      } ${!isMinimized ? 'max-w-[calc(100vw-40px)]' : ''}`}
       style={
         isMinimized 
           ? {
@@ -58,8 +58,7 @@ const FloatingNotepad = ({
             resize: 'both',
             overflow: 'hidden',
             minWidth: '200px',
-            minHeight: '200px',
-            maxWidth: 'calc(100vw - 40px)' // Prevent overflow on small screens
+            minHeight: '200px'
           }
       }
     >
