@@ -672,3 +672,22 @@ input:focus {
 .hover\:text-gray-600:hover {
   color: #4b5563;
 }
+
+/* Mobile notepad adjustments */
+@media (max-width: 768px) {
+  .floating-notepad-expanded {
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  
+  .floating-notepad-expanded .notepad-header-buttons button {
+    padding: 2px !important;
+  }
+  
+  .floating-notepad-expanded .notepad-header-buttons svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+}

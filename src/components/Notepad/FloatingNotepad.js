@@ -31,7 +31,7 @@ const FloatingNotepad = ({
         darkMode 
           ? 'bg-gray-800 border-gray-600' 
           : 'bg-white border-gray-300'
-      } ${!isMinimized ? 'max-w-[calc(100vw-40px)]' : ''}`}
+      } ${!isMinimized ? 'floating-notepad-expanded' : ''}`}
       style={
         isMinimized 
           ? {
@@ -51,10 +51,8 @@ const FloatingNotepad = ({
           : {
             // Expanded: Floating window
             bottom: '20px',
-            right: '10px', // Reduced right margin
-            left: '10px', // Add left margin to prevent cutoff
-            width: 'auto', // Let it size automatically within constraints
-            maxWidth: `${dimensions.width}px`, // Respect user's preferred width
+            right: '20px',
+            width: `${dimensions.width}px`,
             height: `${dimensions.height}px`,
             borderRadius: '8px',
             resize: 'both',
@@ -96,13 +94,13 @@ const FloatingNotepad = ({
         </div>
 
         {/* Right side - Export buttons (when expanded) + Minimize/Maximize button */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0 notepad-header-buttons">
           {!isMinimized && (
             <>
               <button
                 onClick={onExportTxt}
                 disabled={!content.trim()}
-                className={`p-0.5 rounded transition-colors ${
+                className={`p-1 rounded text-xs transition-colors ${
                   content.trim()
                     ? darkMode 
                       ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
@@ -113,12 +111,12 @@ const FloatingNotepad = ({
                 }`}
                 title="Export as TXT"
               >
-                <Download className="w-2.5 h-2.5" />
+                <Download className="w-3 h-3" />
               </button>
               <button
                 onClick={onUploadToSongs}
                 disabled={!content.trim()}
-                className={`p-0.5 rounded transition-colors ${
+                className={`p-1 rounded text-xs transition-colors ${
                   content.trim()
                     ? darkMode 
                       ? 'bg-green-800 hover:bg-green-700 text-green-200' 
@@ -129,18 +127,18 @@ const FloatingNotepad = ({
                 }`}
                 title="Add to Songs"
               >
-                <Upload className="w-2.5 h-2.5" />
+                <Upload className="w-3 h-3" />
               </button>
             </>
           )}
-
+          
           <button
             onClick={toggleMinimized}
-            className={`p-0.5 rounded hover:bg-opacity-20 hover:bg-gray-500 ${
+            className={`p-1 rounded hover:bg-opacity-20 hover:bg-gray-500 ${
               darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
-            {isMinimized ? <Maximize2 className="w-2.5 h-2.5" /> : <Minimize2 className="w-2.5 h-2.5" />}
+            {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
