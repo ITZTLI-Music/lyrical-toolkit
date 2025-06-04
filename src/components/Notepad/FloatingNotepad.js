@@ -102,7 +102,7 @@ const FloatingNotepad = ({
               <button
                 onClick={onExportTxt}
                 disabled={!content.trim()}
-                className={`p-1 rounded text-xs transition-colors ${
+                className={`p-1 rounded transition-colors ${
                   content.trim()
                     ? darkMode 
                       ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
@@ -118,7 +118,7 @@ const FloatingNotepad = ({
               <button
                 onClick={onUploadToSongs}
                 disabled={!content.trim()}
-                className={`p-1 rounded text-xs transition-colors ${
+                className={`p-1 rounded transition-colors ${
                   content.trim()
                     ? darkMode 
                       ? 'bg-green-800 hover:bg-green-700 text-green-200' 
@@ -133,14 +133,14 @@ const FloatingNotepad = ({
               </button>
             </>
           )}
-          
+
           <button
             onClick={toggleMinimized}
             className={`p-1 rounded hover:bg-opacity-20 hover:bg-gray-500 ${
               darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
-            {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+            {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
           </button>
         </div>
       </div>
