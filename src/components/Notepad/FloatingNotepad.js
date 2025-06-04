@@ -51,8 +51,10 @@ const FloatingNotepad = ({
           : {
             // Expanded: Floating window
             bottom: '20px',
-            right: '20px',
-            width: `${Math.min(dimensions.width, 360)}px`, // Cap width at 360px for mobile
+            right: '10px', // Reduced right margin
+            left: '10px', // Add left margin to prevent cutoff
+            width: 'auto', // Let it size automatically within constraints
+            maxWidth: `${dimensions.width}px`, // Respect user's preferred width
             height: `${dimensions.height}px`,
             borderRadius: '8px',
             resize: 'both',
