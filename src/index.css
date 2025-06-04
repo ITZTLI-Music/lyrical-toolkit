@@ -683,13 +683,13 @@ input:focus {
   }
   
   .floating-notepad-expanded .notepad-header-buttons button {
-    padding: 4px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
+    padding: 6px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
   }
   
   .floating-notepad-expanded .notepad-header-buttons svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 }
