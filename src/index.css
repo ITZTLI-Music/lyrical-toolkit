@@ -693,3 +693,31 @@ input:focus {
     height: 18px !important;
   }
 }
+
+/* Music Banner Mobile Adjustments */
+@media (max-width: 768px) {
+  .music-banner-mobile .flex {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .music-banner-mobile .order-1,
+  .music-banner-mobile .order-5 {
+    order: 6;
+  }
+  
+  .music-banner-mobile .order-2,
+  .music-banner-mobile .order-3,
+  .music-banner-mobile .order-4 {
+    order: 1;
+  }
+}
+
+/* Force album images to stay constrained */
+.music-banner img {
+  max-width: 64px !important;
+  max-height: 64px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: cover;
+}

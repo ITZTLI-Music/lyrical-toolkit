@@ -20,6 +20,7 @@ import { useNotepad } from './hooks/useNotepad';
 // Import components
 import Header from './components/Header/Header';
 import Manual from './components/Shared/Manual';
+import MusicBanner from './components/Shared/MusicBanner';
 import SongModal from './components/Shared/SongModal';
 import SearchTab from './components/Tabs/SearchTab';
 import DictionaryTab from './components/Tabs/DictionaryTab';
@@ -465,6 +466,9 @@ const LyricsSearchApp = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${themeClasses}`}>
+      {/* Music Banner */}
+      <MusicBanner />
+
       {/* Header */}
       <Header 
         activeTab={activeTab}
