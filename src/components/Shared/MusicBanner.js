@@ -59,13 +59,23 @@ const MusicBanner = () => {
           
           <div className="text-center order-3">
             <div className="text-sm font-medium text-white mb-1">Check out my music!</div>
+            {/* Desktop: Show full website link */}
             
           <a  href="https://itztli-music.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-300 hover:text-white transition-colors px-2 py-1 border border-gray-500 rounded"
+              className="hidden md:inline-block text-xs text-gray-300 hover:text-white transition-colors px-2 py-1 border border-gray-500 rounded"
             >
               itztli-music.com
+            </a>
+            {/* Mobile: Show Linktree link */}
+            
+          <a  href="https://linktr.ee/ITZTLI.music"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="md:hidden text-xs text-gray-300 hover:text-white transition-colors px-2 py-1 border border-gray-500 rounded"
+            >
+              Linktree
             </a>
           </div>
 
