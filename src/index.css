@@ -721,3 +721,23 @@ input:focus {
   height: auto !important;
   object-fit: cover;
 }
+
+/* Mobile-first: Show mobile link by default, hide desktop link */
+.desktop-link {
+  display: none;
+}
+
+.mobile-link {
+  display: inline-block;
+}
+
+/* Desktop: Show desktop link, hide mobile link */
+@media (min-width: 768px) {
+  .desktop-link {
+    display: inline-block;
+  }
+  
+  .mobile-link {
+    display: none;
+  }
+}
