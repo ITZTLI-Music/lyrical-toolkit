@@ -741,3 +741,14 @@ input:focus {
     display: none;
   }
 }
+
+/* Hide social links on mobile, show on desktop */
+.desktop-social {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktop-social {
+    display: flex;
+  }
+}

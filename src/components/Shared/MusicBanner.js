@@ -21,7 +21,7 @@ const MusicBanner = () => {
         <div className="flex items-center justify-center gap-4 flex-wrap">
           
           {/* Left Social Links */}
-          <div className="flex gap-3 order-1">
+          <div className="flex gap-3 order-1 desktop-social">
             
           <a  href="https://open.spotify.com/artist/63oAAVGEpX2fnQC2eF0rbM"
               target="_blank"
@@ -95,7 +95,7 @@ const MusicBanner = () => {
           </a>
 
           {/* Right Social Links */}
-          <div className="flex gap-3 order-5">
+          <div className="flex gap-3 order-5 desktop-social">
             
           <a  href="https://www.tiktok.com/@itztli.music?_t=zt-8vgi63vcwwp&_r=1"
               target="_blank"
