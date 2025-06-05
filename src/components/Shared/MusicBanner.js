@@ -11,7 +11,8 @@ const MusicBanner = () => {
       {/* Dismiss Button */}
       <button
         onClick={() => setIsVisible(false)}
-        className="absolute top-2 right-2 text-black hover:text-white transition-colors z-10"        title="Dismiss banner"
+        className="absolute top-2 right-2 text-black hover:text-white transition-colors z-10 dismiss-button"
+        title="Dismiss banner"
       >
         <X className="w-4 h-4" />
       </button>

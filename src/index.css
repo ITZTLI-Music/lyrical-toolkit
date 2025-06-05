@@ -752,3 +752,20 @@ input:focus {
     display: flex;
   }
 }
+
+/* Make dismiss X button smaller on mobile */
+.dismiss-button {
+  padding: 4px;
+}
+
+.dismiss-button svg {
+  width: 12px;
+  height: 12px;
+}
+
+@media (min-width: 768px) {
+  .dismiss-button svg {
+    width: 16px;
+    height: 16px;
+  }
+}
