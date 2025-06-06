@@ -10,6 +10,7 @@ import {
 } from './utils/textAnalysis';
 import { analyzeRhymeStatistics } from './utils/phoneticUtils';
 import { songVocabularyPhoneticMap } from './data/songVocabularyPhoneticMap';
+import { saveUserSongs, loadUserSongs, clearUserSongs, saveExampleSongDeleted, loadExampleSongDeleted } from './utils/songStorage';
 
 // Import hooks
 import { useSearchHistory, useDarkMode, useHighlightWord } from './hooks/useLocalStorage';
@@ -67,8 +68,7 @@ const LyricsSearchApp = () => {
 
   // Manual states
   const [showManual, setShowManual] = useState(false);
-  const [exampleSongDeleted, setExampleSongDeleted] = useState(false);
-
+  const [exampleSongDeleted, setExampleSongDeleted] = useState(() => loadExampleSongDeleted());
   // Stats filter
   const [selectedStatsFilter, setSelectedStatsFilter] = useState('all');
 
@@ -81,15 +81,19 @@ const LyricsSearchApp = () => {
   //Notepad hook
   const notepadState = useNotepad();
 
-  // Load example song
+// Load example song only when needed
   const loadingExampleRef = useRef(false);
+  const [userSongsLoaded, setUserSongsLoaded] = useState(false);
   
   useEffect(() => {
     const loadExampleSong = async () => {
-      if (exampleSongDeleted || loadingExampleRef.current) return;
+      if (exampleSongDeleted || loadingExampleRef.current || !userSongsLoaded) return;
       
       const exampleExists = songs.some(song => song.isExample);
-      if (exampleExists) return;
+      const userSongsExist = songs.some(song => !song.isExample);
+      
+      // Only load example if no user songs exist and no example already exists
+      if (exampleExists || userSongsExist) return;
       
       loadingExampleRef.current = true;
 
@@ -126,10 +130,39 @@ const LyricsSearchApp = () => {
       }
     };
 
-    if (songs.length === 0) {
+    // Only try to load example after user songs have been loaded
+    if (userSongsLoaded) {
       setTimeout(loadExampleSong, 100);
     }
-  }, [songs.length, exampleSongDeleted]);
+  }, [songs.length, exampleSongDeleted, userSongsLoaded]);
+
+  // Load persisted user songs on app startup
+  useEffect(() => {
+    const loadPersistedSongs = () => {
+      const userSongs = loadUserSongs();
+      if (userSongs.length > 0) {
+        setSongs(prev => {
+          // Only add if not already present (avoid duplicates)
+          const existingIds = new Set(prev.map(song => song.id));
+          const newSongs = userSongs.filter(song => !existingIds.has(song.id));
+          return [...prev, ...newSongs];
+        });
+      }
+      // Mark that user songs loading is complete (whether we found any or not)
+      setUserSongsLoaded(true);
+    };
+
+    // Load persisted songs on initial render
+    loadPersistedSongs();
+  }, []); // Empty dependency array - only run once on mount
+
+  // Persist user songs whenever songs change
+  useEffect(() => {
+    // Only save if we have songs and they're not just the initial load
+    if (songs.length > 0) {
+      saveUserSongs(songs);
+    }
+  }, [songs]);
 
   // Reset stats filter when songs change
   useEffect(() => {
@@ -301,8 +334,12 @@ const LyricsSearchApp = () => {
         const songToDelete = prev.find(song => song.id === songId);
         if (songToDelete && songToDelete.isExample) {
           setExampleSongDeleted(true);
+          saveExampleSongDeleted(true); // Persist the deletion state
         }
-        return prev.filter(song => song.id !== songId);
+        const updatedSongs = prev.filter(song => song.id !== songId);
+        
+        // The useEffect will handle persisting the updated songs
+        return updatedSongs;
       });
     }
   };
@@ -314,6 +351,8 @@ const LyricsSearchApp = () => {
       setSearchQuery('');
       setHighlightWord('');
       setSearchHistory([]);
+      clearUserSongs(); // Clear from localStorage as well
+      setExampleSongDeleted(false); // Reset so example can load again
     }
   };
 
