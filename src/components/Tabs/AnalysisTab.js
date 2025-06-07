@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { generateRhymingDictionary, analyzeMeter, analyzeMeterPatterns, calculateFlowConsistency, analyzeRhythmVariation, performWritingQualityAnalysis } from '../../utils/textAnalysis';
 import { analyzeFullTextRhymes } from '../../utils/phoneticUtils';
 import { songVocabularyPhoneticMap } from '../../data/songVocabularyPhoneticMap';
-import HighlightedLyrics from '../Analysis/HighlightedLyrics';
+import RhymeEditor from '../Analysis/RhymeEditor';
+import EditableHighlightedLyrics from '../Analysis/EditableHighlightedLyrics';
 
 const AnalysisTab = ({ 
   songs,
@@ -16,6 +17,10 @@ const AnalysisTab = ({
   stats,
   darkMode 
 }) => {
+  // State for edited lyrics
+  const [editedStructuredLyrics, setEditedStructuredLyrics] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const handleRhymingDictionary = () => {
     if (songs.length === 0) {
       alert('Please upload some songs first!');
@@ -305,14 +310,36 @@ const AnalysisTab = ({
                 Rhyme Analysis: "{analysisResults.song?.title || 'Unknown Song'}"
               </h3>
               
+              {/* Rhyme Editor */}
+              <RhymeEditor
+                structuredLyrics={analysisResults.structuredLyrics}
+                editedLyrics={editedStructuredLyrics || analysisResults.structuredLyrics}
+                onLyricsUpdate={setEditedStructuredLyrics}
+                songId={analysisResults.song?.id}
+                songTitle={analysisResults.song?.title}
+                darkMode={darkMode}
+                isEditMode={isEditMode}
+                setIsEditMode={setIsEditMode}
+              />
+              
               {/* Rhyme Visualization */}
               <div className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h4 className={`text-md font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Rhyme Detection
                 </h4>
-                <HighlightedLyrics
-                  structuredLyrics={analysisResults.structuredLyrics}
+                <EditableHighlightedLyrics
+                  structuredLyrics={editedStructuredLyrics || analysisResults.structuredLyrics}
                   darkMode={darkMode}
+                  isEditMode={isEditMode}
+                  onWordClick={(word, lineIndex, wordIndex, event) => {
+                    // This will be handled by RhymeEditor through props
+                    const rhymeEditor = document.querySelector('[data-rhyme-editor]');
+                    if (rhymeEditor) {
+                      rhymeEditor.dispatchEvent(new CustomEvent('wordClick', {
+                        detail: { word, lineIndex, wordIndex, event }
+                      }));
+                    }
+                  }}
                 />
               </div>
             </div>
