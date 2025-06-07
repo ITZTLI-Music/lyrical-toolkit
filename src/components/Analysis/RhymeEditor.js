@@ -252,11 +252,6 @@ const RhymeEditor = ({
         width: 794,
         height: tempContainer.scrollHeight,
         onclone: (clonedDoc) => {
-          // Additional processing if needed
-          const clonedContainer = clonedDoc.querySelector(tempContainer.outerHTML);
-          if (clonedContainer) {
-            clonedContainer.style.width = '794px';
-          }
         }
       });
       
