@@ -192,86 +192,72 @@ const RhymeEditor = ({
     if (!element) return;
 
     try {
-      // Detect if we're on mobile
-      const isMobile = window.innerWidth <= 768;
-      
       // Clone the element to avoid modifying the original
       const clonedElement = element.cloneNode(true);
       
-      // Create a temporary container
+      // Create a temporary container with fixed desktop width
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.visibility = 'hidden';
-      
-      // Use larger canvas width for mobile
-      const canvasWidth = isMobile ? 1200 : 794;
-      tempContainer.style.width = `${canvasWidth}px`;
+      tempContainer.style.width = '794px'; // Fixed A4 width
+      tempContainer.style.minWidth = '794px';
+      tempContainer.style.maxWidth = '794px';
       tempContainer.style.backgroundColor = '#ffffff';
       tempContainer.style.color = '#374151';
-      tempContainer.style.padding = '40px';
-      tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
-      tempContainer.style.fontSize = isMobile ? '16px' : '14px';
-      tempContainer.style.lineHeight = isMobile ? '1.8' : '1.6';
+      tempContainer.style.padding = '20px';
+      tempContainer.style.overflow = 'visible';
+      tempContainer.style.boxSizing = 'border-box';
       
-      // Preserve the original structure but apply light mode
+      // Force the cloned element to expand to full width
+      clonedElement.style.width = '100%';
+      clonedElement.style.maxWidth = 'none';
+      clonedElement.style.minWidth = 'auto';
       clonedElement.style.backgroundColor = '#ffffff';
       clonedElement.style.color = '#374151';
-      clonedElement.style.width = '100%';
-      clonedElement.style.fontSize = 'inherit';
-      clonedElement.style.lineHeight = 'inherit';
-      
-      // Remove dark mode classes but preserve structure
+      clonedElement.style.whiteSpace = 'pre-wrap';
+      clonedElement.style.wordBreak = 'break-word';
+      clonedElement.style.overflow = 'visible';
       clonedElement.className = clonedElement.className.replace(/dark/g, '');
       
-      // Apply light mode colors to all elements without changing layout
+      // Apply light mode to all child elements
       const allElements = clonedElement.querySelectorAll('*');
       allElements.forEach(el => {
-        // Only change colors, not layout properties
-        if (el.style.color && el.style.color.includes('rgb')) {
+        // Remove any inline dark styles
+        if (el.style.backgroundColor && el.style.backgroundColor !== 'transparent') {
+          el.style.backgroundColor = '';
+        }
+        if (el.style.color) {
           el.style.color = '#374151';
         }
-        
-        // Handle rhyme highlights specifically
-        if (el.classList.contains('rhyme-word-highlight')) {
-          // Don't change display or positioning, just ensure visibility
-          el.style.fontSize = isMobile ? '16px' : '14px';
-          el.style.fontWeight = '600';
-          // Keep original background colors but ensure text is readable
-          if (el.style.color) {
-            // Don't override the rhyme group colors, they should be fine
-          }
-        }
-        
-        // Remove any dark mode background colors from non-rhyme elements
-        if (!el.classList.contains('rhyme-word-highlight')) {
-          if (el.style.backgroundColor && 
-              (el.style.backgroundColor.includes('gray') || 
-              el.style.backgroundColor.includes('rgb(31') ||
-              el.style.backgroundColor.includes('rgb(55'))) {
-            el.style.backgroundColor = '#ffffff';
-          }
+        // Ensure proper text wrapping
+        if (el.tagName === 'PRE') {
+          el.style.whiteSpace = 'pre-wrap';
+          el.style.wordBreak = 'break-word';
         }
       });
       
       tempContainer.appendChild(clonedElement);
       document.body.appendChild(tempContainer);
 
-      // Wait for layout to settle
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Force a reflow to ensure proper rendering
+      tempContainer.offsetHeight;
 
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
-        scale: isMobile ? 1.5 : 2,
-        logging: true, // Enable logging to debug
+        scale: 2,
+        logging: false,
         useCORS: true,
-        windowWidth: canvasWidth,
-        width: canvasWidth,
+        windowWidth: 794, // Force desktop width
+        width: 794,
         height: tempContainer.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        allowTaint: false
+        onclone: (clonedDoc) => {
+          // Additional processing if needed
+          const clonedContainer = clonedDoc.querySelector(tempContainer.outerHTML);
+          if (clonedContainer) {
+            clonedContainer.style.width = '794px';
+          }
+        }
       });
       
       // Remove temp container
@@ -279,32 +265,27 @@ const RhymeEditor = ({
       
       const imgData = canvas.toDataURL('image/png');
       
-      // Calculate dimensions for single long PDF
+      // Calculate dimensions for single page
       const pdfWidth = 210; // A4 width in mm
       const imgWidth = pdfWidth - 20; // Leave 10mm margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Create single long PDF document
+      // Create PDF with custom page height to fit all content
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [pdfWidth, Math.max(297, imgHeight + 50)]
+        format: [pdfWidth, imgHeight + 30] // Custom height to fit all content + margins
       });
       
       // Add title
       pdf.setFontSize(16);
-      pdf.text(`${songTitle}`, 10, 15);
+      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 10);
       
-      // Add subtitle
-      pdf.setFontSize(10);
-      pdf.text('Rhyme Scheme Analysis', 10, 25);
-      
-      // Add the entire image
-      pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
+      // Add the entire image in one go
+      pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
       
       // Save PDF
       pdf.save(`${songTitle}_rhyme_scheme.pdf`);
-      
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
