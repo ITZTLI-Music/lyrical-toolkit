@@ -241,7 +241,7 @@ const RhymeEditor = ({
       document.body.appendChild(tempContainer);
 
       // Force a reflow to ensure proper rendering
-      tempContainer.offsetHeight;
+      void tempContainer.offsetHeight;
 
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
