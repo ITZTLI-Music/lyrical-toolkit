@@ -192,22 +192,71 @@ const RhymeEditor = ({
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-        scale: 2
+      // Clone the element to avoid modifying the original
+      const clonedElement = element.cloneNode(true);
+      
+      // Create a temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.width = '794px'; // A4 width in pixels at 96 DPI
+      tempContainer.style.backgroundColor = '#ffffff'; // Always white
+      tempContainer.style.color = '#374151'; // Always dark text
+      tempContainer.style.padding = '20px';
+      
+      // Force light mode styles on cloned element
+      clonedElement.style.backgroundColor = '#ffffff';
+      clonedElement.style.color = '#374151';
+      clonedElement.className = clonedElement.className.replace(/dark/g, ''); // Remove dark classes
+      
+      // Apply light mode to all child elements
+      const allElements = clonedElement.querySelectorAll('*');
+      allElements.forEach(el => {
+        // Remove any inline dark styles
+        if (el.style.backgroundColor && el.style.backgroundColor !== 'transparent') {
+          el.style.backgroundColor = '';
+        }
+        if (el.style.color) {
+          el.style.color = '#374151';
+        }
       });
       
+      tempContainer.appendChild(clonedElement);
+      document.body.appendChild(tempContainer);
+
+      const canvas = await html2canvas(tempContainer, {
+        backgroundColor: '#ffffff', // Always white
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        windowWidth: 794,
+        width: 794,
+        height: tempContainer.scrollHeight
+      });
+      
+      // Remove temp container
+      document.body.removeChild(tempContainer);
+      
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF();
+      
+      // Calculate dimensions for single page
+      const pdfWidth = 210; // A4 width in mm
+      const imgWidth = pdfWidth - 20; // Leave 10mm margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Create PDF with custom page height to fit all content
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: [pdfWidth, imgHeight + 30] // Custom height to fit all content + margins
+      });
       
       // Add title
       pdf.setFontSize(16);
       pdf.text(`${songTitle}`, 10, 10);
       
-      // Add rhyme visualization
-      const imgWidth = 190;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 10, 30, imgWidth, imgHeight);
+      // Add the entire image in one go
+      pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
       
       // Save PDF
       pdf.save(`${songTitle}_rhyme_scheme.pdf`);
