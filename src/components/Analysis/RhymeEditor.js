@@ -192,22 +192,52 @@ const RhymeEditor = ({
     if (!element) return;
 
     try {
+      // Detect if we're on mobile
+      const isMobile = window.innerWidth <= 768;
+      
       // Clone the element to avoid modifying the original
       const clonedElement = element.cloneNode(true);
       
-      // Create a temporary container
+      // Create a temporary container with mobile-optimized settings
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '794px'; // A4 width in pixels at 96 DPI
-      tempContainer.style.backgroundColor = '#ffffff'; // Always white
-      tempContainer.style.color = '#374151'; // Always dark text
-      tempContainer.style.padding = '20px';
+      tempContainer.style.top = '0';
+      
+      // Use larger canvas width for mobile to prevent cutoff
+      const canvasWidth = isMobile ? 1200 : 794; // Much larger for mobile
+      tempContainer.style.width = `${canvasWidth}px`;
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.style.color = '#374151';
+      tempContainer.style.padding = '40px'; // Increased padding for mobile
+      tempContainer.style.fontSize = isMobile ? '18px' : '14px'; // Larger base font for mobile
+      tempContainer.style.lineHeight = isMobile ? '1.8' : '1.5';
       
       // Force light mode styles on cloned element
       clonedElement.style.backgroundColor = '#ffffff';
       clonedElement.style.color = '#374151';
-      clonedElement.className = clonedElement.className.replace(/dark/g, ''); // Remove dark classes
+      clonedElement.style.width = '100%';
+      clonedElement.style.minHeight = 'auto';
+      clonedElement.className = clonedElement.className.replace(/dark/g, '');
+      
+      // Mobile-specific styling improvements
+      if (isMobile) {
+        clonedElement.style.fontSize = '18px';
+        clonedElement.style.lineHeight = '1.8';
+        
+        // Enhance rhyme word bubbles for mobile
+        const rhymeWords = clonedElement.querySelectorAll('.rhyme-word-highlight');
+        rhymeWords.forEach(word => {
+          word.style.fontSize = '16px';
+          word.style.padding = '4px 8px';
+          word.style.margin = '2px';
+          word.style.display = 'inline-block';
+          word.style.minWidth = 'auto';
+          word.style.textAlign = 'center';
+          word.style.fontWeight = '600';
+          word.style.borderRadius = '6px';
+        });
+      }
       
       // Apply light mode to all child elements
       const allElements = clonedElement.querySelectorAll('*');
@@ -219,19 +249,31 @@ const RhymeEditor = ({
         if (el.style.color) {
           el.style.color = '#374151';
         }
+        
+        // Ensure proper text sizing
+        if (el.classList.contains('rhyme-word-highlight')) {
+          el.style.fontSize = isMobile ? '16px' : '14px';
+          el.style.padding = isMobile ? '4px 8px' : '2px 6px';
+        }
       });
       
       tempContainer.appendChild(clonedElement);
       document.body.appendChild(tempContainer);
 
+      // Wait for fonts and styles to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const canvas = await html2canvas(tempContainer, {
-        backgroundColor: '#ffffff', // Always white
-        scale: 2,
+        backgroundColor: '#ffffff',
+        scale: isMobile ? 1.5 : 2, // Slightly lower scale for mobile to handle larger content
         logging: false,
         useCORS: true,
-        windowWidth: 794,
-        width: 794,
-        height: tempContainer.scrollHeight
+        windowWidth: canvasWidth,
+        width: canvasWidth,
+        height: tempContainer.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+        allowTaint: false
       });
       
       // Remove temp container
@@ -239,27 +281,68 @@ const RhymeEditor = ({
       
       const imgData = canvas.toDataURL('image/png');
       
-      // Calculate dimensions for single page
+      // Calculate dimensions for PDF - mobile optimized
       const pdfWidth = 210; // A4 width in mm
       const imgWidth = pdfWidth - 20; // Leave 10mm margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Create PDF with custom page height to fit all content
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: [pdfWidth, imgHeight + 30] // Custom height to fit all content + margins
-      });
+      // For mobile, if content is very tall, we might need multiple pages
+      const maxSinglePageHeight = 280; // Max height for single page in mm
       
-      // Add title
-      pdf.setFontSize(16);
-      pdf.text(`${songTitle}`, 10, 10);
-      
-      // Add the entire image in one go
-      pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
-      
-      // Save PDF
-      pdf.save(`${songTitle}_rhyme_scheme.pdf`);
+      if (imgHeight > maxSinglePageHeight && isMobile) {
+        // Multi-page PDF for very long mobile content
+        const pdf = new jsPDF({
+          orientation: 'p',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        const pageHeight = 280; // Usable page height
+        const totalPages = Math.ceil(imgHeight / pageHeight);
+        
+        for (let page = 0; page < totalPages; page++) {
+          if (page > 0) pdf.addPage();
+          
+          // Add title on first page only
+          if (page === 0) {
+            pdf.setFontSize(16);
+            pdf.text(`${songTitle}`, 10, 15);
+          }
+          
+          const yOffset = page === 0 ? 25 : 10;
+          const sourceY = page * pageHeight * (canvas.height / imgHeight);
+          const sourceHeight = pageHeight * (canvas.height / imgHeight);
+          
+          // Create a temporary canvas for this page section
+          const pageCanvas = document.createElement('canvas');
+          const pageCtx = pageCanvas.getContext('2d');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          
+          pageCtx.drawImage(canvas, 0, -sourceY);
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          
+          pdf.addImage(pageImgData, 'PNG', 10, yOffset, imgWidth, pageHeight);
+        }
+        
+        pdf.save(`${songTitle}_rhyme_scheme.pdf`);
+      } else {
+        // Single page PDF
+        const pdf = new jsPDF({
+          orientation: 'p',
+          unit: 'mm',
+          format: [pdfWidth, Math.max(297, imgHeight + 40)] // Ensure minimum A4 height
+        });
+        
+        // Add title
+        pdf.setFontSize(16);
+        pdf.text(`${songTitle}`, 10, 15);
+        
+        // Add the image
+        pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
+        
+        pdf.save(`${songTitle}_rhyme_scheme.pdf`);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
