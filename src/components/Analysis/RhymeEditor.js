@@ -209,8 +209,8 @@ const RhymeEditor = ({
       tempContainer.style.overflow = 'visible';
       tempContainer.style.boxSizing = 'border-box';
       tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
-      tempContainer.style.fontSize = '14px'; // Slightly smaller for better fit
-      tempContainer.style.lineHeight = '1.5';
+      tempContainer.style.fontSize = '16px'; // Back to normal size
+      tempContainer.style.lineHeight = '1.4'; // Tighter line height
       
       // Force desktop styling on the cloned element
       clonedElement.style.width = '100%';
@@ -221,8 +221,8 @@ const RhymeEditor = ({
       clonedElement.style.whiteSpace = 'pre-wrap';
       clonedElement.style.wordBreak = 'break-word';
       clonedElement.style.overflow = 'visible';
-      clonedElement.style.fontSize = '14px';
-      clonedElement.style.lineHeight = '1.5';
+      clonedElement.style.fontSize = '16px';
+      clonedElement.style.lineHeight = '1.4';
       clonedElement.style.margin = '0';
       clonedElement.style.padding = '0';
       clonedElement.className = clonedElement.className.replace(/dark/g, '');
@@ -242,29 +242,39 @@ const RhymeEditor = ({
         if (el.tagName === 'PRE') {
           el.style.whiteSpace = 'pre-wrap';
           el.style.wordBreak = 'break-word';
-          el.style.fontSize = '14px';
-          el.style.lineHeight = '1.5';
+          el.style.fontSize = '16px';
+          el.style.lineHeight = '1.4';
           el.style.margin = '0';
           el.style.padding = '0';
         }
         
         // Force desktop spacing for divs (line containers)
         if (el.tagName === 'DIV') {
-          el.style.minHeight = '1.4em';
-          el.style.fontSize = '14px';
-          el.style.lineHeight = '1.5';
+          el.style.minHeight = '1.3em';
+          el.style.fontSize = '16px';
+          el.style.lineHeight = '1.4';
           el.style.margin = '0';
-          el.style.marginBottom = '2px'; // Small space between lines
+          el.style.marginBottom = '1px'; // Minimal space between lines
         }
         
-        // Reduce spacing for spans (words) - this fixes the excessive spacing
+        // Minimal spacing for spans (words) - much tighter
         if (el.tagName === 'SPAN') {
-          el.style.fontSize = '14px';
+          el.style.fontSize = '16px';
           el.style.fontWeight = el.classList.contains('rhyme-word-highlight') ? '600' : 'normal';
-          el.style.borderRadius = '2px';
-          el.style.padding = '1px 2px'; // Much smaller padding
-          el.style.margin = '0'; // Remove margin between words
-          el.style.display = 'inline'; // Ensure inline display
+          
+          if (el.classList.contains('rhyme-word-highlight')) {
+            // Only highlighted words get minimal padding
+            el.style.borderRadius = '2px';
+            el.style.padding = '0px 1px'; // Extremely minimal padding
+            el.style.margin = '0';
+          } else {
+            // Regular words get no padding at all
+            el.style.padding = '0';
+            el.style.margin = '0';
+          }
+          
+          el.style.display = 'inline';
+          el.style.verticalAlign = 'baseline';
         }
       });
       
@@ -288,14 +298,14 @@ const RhymeEditor = ({
       // Use higher DPI and force desktop-like capture
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
-        scale: 2, // Reduced scale for better performance
+        scale: 2,
         logging: false,
         useCORS: true,
         windowWidth: 1200,
-        windowHeight: Math.max(800, actualHeight + 100), // Dynamic height
+        windowHeight: Math.max(800, actualHeight + 100),
         width: 794,
-        height: actualHeight, // Use actual content height
-        dpi: 150, // Balanced DPI
+        height: actualHeight,
+        dpi: 150,
         allowTaint: false,
         removeContainer: false,
         scrollX: 0,
@@ -305,83 +315,29 @@ const RhymeEditor = ({
       // Remove temp container
       document.body.removeChild(tempContainer);
       
-      const imgData = canvas.toDataURL('image/png', 0.95); // Good quality, smaller file
+      const imgData = canvas.toDataURL('image/png', 0.95);
       
       // Calculate dimensions for PDF
       const pdfWidth = 210; // A4 width in mm
       const imgWidth = pdfWidth - 20; // Leave 10mm margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Determine if we need multiple pages
-      const maxPageHeight = 280; // Max content height per page (A4 - margins)
-      const needsMultiplePages = imgHeight > maxPageHeight;
+      // Create single page PDF (most songs should fit)
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: [pdfWidth, Math.max(297, imgHeight + 40)]
+      });
       
-      if (needsMultiplePages) {
-        // Multi-page PDF
-        const pdf = new jsPDF({
-          orientation: 'p',
-          unit: 'mm',
-          format: 'a4'
-        });
-        
-        const pageHeight = 297; // A4 height
-        const contentHeight = pageHeight - 40; // Leave top/bottom margins
-        let yPosition = 0;
-        let pageNumber = 1;
-        
-        while (yPosition < imgHeight) {
-          if (pageNumber > 1) {
-            pdf.addPage();
-          }
-          
-          // Add title on first page only
-          if (pageNumber === 1) {
-            pdf.setFontSize(16);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 15);
-          }
-          
-          // Calculate how much of the image to include on this page
-          const remainingHeight = imgHeight - yPosition;
-          const pageContentHeight = Math.min(contentHeight, remainingHeight);
-          
-          // Add image slice to this page
-          pdf.addImage(
-            imgData,
-            'PNG',
-            10,
-            pageNumber === 1 ? 25 : 10,
-            imgWidth,
-            pageContentHeight,
-            undefined,
-            'FAST',
-            0, // rotation
-            yPosition // source Y offset
-          );
-          
-          yPosition += pageContentHeight;
-          pageNumber++;
-        }
-        
-        pdf.save(`${songTitle}_rhyme_scheme.pdf`);
-      } else {
-        // Single page PDF
-        const pdf = new jsPDF({
-          orientation: 'p',
-          unit: 'mm',
-          format: [pdfWidth, Math.max(297, imgHeight + 40)]
-        });
-        
-        // Add title
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 15);
-        
-        // Add the entire image
-        pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight, undefined, 'FAST');
-        
-        pdf.save(`${songTitle}_rhyme_scheme.pdf`);
-      }
+      // Add title
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 15);
+      
+      // Add the entire image
+      pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight, undefined, 'FAST');
+      
+      pdf.save(`${songTitle}_rhyme_scheme.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
