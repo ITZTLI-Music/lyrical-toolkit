@@ -199,27 +199,27 @@ const RhymeEditor = ({
       const tempContainer = document.createElement('div');
       tempContainer.innerHTML = originalContent;
       
-      // Apply aggressive desktop-first styling
+      // Apply very tight desktop-first styling
       Object.assign(tempContainer.style, {
         position: 'absolute',
         left: '-9999px',
         top: '0',
-        width: '750px', // Slightly smaller for better fit
+        width: '750px',
         minWidth: '750px',
         maxWidth: '750px',
         backgroundColor: '#ffffff',
         color: '#374151',
-        padding: '15px',
+        padding: '10px',
         margin: '0',
         fontFamily: 'Arial, sans-serif',
-        fontSize: '15px',
-        lineHeight: '1.3',
+        fontSize: '14px',
+        lineHeight: '1.2', // Much tighter line spacing
         whiteSpace: 'pre-wrap',
         wordBreak: 'normal',
         overflow: 'visible',
         boxSizing: 'border-box',
-        zoom: '1', // Force normal zoom
-        transform: 'scale(1)', // Force normal scale
+        zoom: '1',
+        transform: 'scale(1)',
       });
       
       // Remove all dark mode classes and force light mode
@@ -234,82 +234,99 @@ const RhymeEditor = ({
         Object.assign(preElement.style, {
           margin: '0',
           padding: '0',
-          fontSize: '15px',
-          lineHeight: '1.3',
+          fontSize: '14px',
+          lineHeight: '1.2',
           whiteSpace: 'pre-wrap',
           wordBreak: 'normal',
           color: '#374151',
           backgroundColor: 'transparent',
+          height: 'auto',
+          maxHeight: 'none',
         });
       }
       
-      // Style all line containers (divs)
+      // Style all line containers (divs) with minimal spacing
       tempContainer.querySelectorAll('div').forEach(div => {
         Object.assign(div.style, {
-          minHeight: '1.2em',
+          minHeight: '1.1em',
           margin: '0',
-          marginBottom: '1px',
+          marginBottom: '0px', // Remove line spacing
           padding: '0',
-          fontSize: '15px',
-          lineHeight: '1.3',
+          fontSize: '14px',
+          lineHeight: '1.2',
+          height: 'auto',
         });
       });
       
-      // Style all word spans with minimal spacing
+      // Style all word spans with ultra-minimal spacing
       tempContainer.querySelectorAll('span').forEach(span => {
         const isHighlighted = span.className.includes('rhyme-word-highlight') || 
                             span.className.includes('rhyme-group-');
         
         Object.assign(span.style, {
-          fontSize: '15px',
+          fontSize: '14px',
           fontWeight: isHighlighted ? '600' : 'normal',
           margin: '0',
-          padding: isHighlighted ? '0px 1px' : '0',
-          borderRadius: isHighlighted ? '1px' : '0',
+          padding: '0', // No padding even for highlighted words
+          borderRadius: '0',
           display: 'inline',
           verticalAlign: 'baseline',
           color: '#374151',
+          border: 'none',
+          boxShadow: 'none',
         });
         
-        // Preserve background colors for highlighted words but make them more subtle
+        // For highlighted words, just use background color with no padding
         if (isHighlighted && span.style.backgroundColor) {
-          // Keep the background color but ensure text is readable
           span.style.color = '#2d3748';
+          // Keep background but remove any spacing
         }
       });
       
       // Add to DOM temporarily
       document.body.appendChild(tempContainer);
       
-      // Force multiple reflows to ensure full rendering
+      // Force multiple reflows and wait longer for complete rendering
       void tempContainer.offsetHeight;
       void tempContainer.scrollHeight;
       
-      // Wait for rendering to complete
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait longer for full content to render
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Get the true content dimensions
+      // Calculate content height more aggressively
+      const allDivs = tempContainer.querySelectorAll('div');
+      let calculatedHeight = 0;
+      
+      allDivs.forEach(div => {
+        const rect = div.getBoundingClientRect();
+        calculatedHeight += rect.height;
+      });
+      
       const contentHeight = Math.max(
         tempContainer.scrollHeight,
         tempContainer.offsetHeight,
-        Array.from(tempContainer.children).reduce((total, child) => {
-          return total + child.offsetHeight + parseInt(getComputedStyle(child).marginBottom || 0);
-        }, 0)
+        calculatedHeight + 50, // Add buffer
+        1200 // Minimum height to ensure we don't cut off
       );
       
-      console.log('Content height:', contentHeight); // Debug log
+      console.log('Content height methods:', {
+        scrollHeight: tempContainer.scrollHeight,
+        offsetHeight: tempContainer.offsetHeight,
+        calculatedHeight: calculatedHeight,
+        finalHeight: contentHeight
+      });
       
-      // Capture with optimized settings for full content
+      // Capture with settings optimized for full content
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
-        scale: 1.5, // Moderate scale for quality vs performance
-        logging: true, // Enable logging to debug
+        scale: 1.5,
+        logging: true,
         useCORS: true,
         allowTaint: false,
         width: 750,
-        height: contentHeight + 50, // Add buffer
-        windowWidth: 1024, // Force desktop window width
-        windowHeight: contentHeight + 200, // Dynamic window height
+        height: contentHeight,
+        windowWidth: 1200,
+        windowHeight: contentHeight + 300, // Extra buffer for window height
         scrollX: 0,
         scrollY: 0,
         x: 0,
@@ -319,12 +336,12 @@ const RhymeEditor = ({
       // Remove temp container
       document.body.removeChild(tempContainer);
       
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height); // Debug log
+      console.log('Final canvas dimensions:', canvas.width, 'x', canvas.height);
       
       const imgData = canvas.toDataURL('image/png', 0.9);
       
       // Calculate PDF dimensions
-      const pdfWidth = 210; // A4 width in mm
+      const pdfWidth = 210;
       const pdfMargin = 10;
       const imgWidth = pdfWidth - (pdfMargin * 2);
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -333,7 +350,7 @@ const RhymeEditor = ({
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [pdfWidth, Math.max(297, imgHeight + 40)] // Dynamic height or A4 minimum
+        format: [pdfWidth, Math.max(297, imgHeight + 40)]
       });
       
       // Add title
