@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDown, ChevronUp, RotateCcw, Download, Edit3, AlertCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 const RhymeEditor = ({ 
   structuredLyrics, 
@@ -186,167 +185,188 @@ const RhymeEditor = ({
     }
   };
 
-  // Export to PDF
+  // Export to PDF using SVG
   const handleExportPDF = async () => {
     const element = document.getElementById('rhyme-visualization');
     if (!element) return;
 
     try {
-      // Get original content
-      const originalContent = element.innerHTML;
-      
-      // Create a completely new container that bypasses mobile constraints
-      const tempContainer = document.createElement('div');
-      tempContainer.innerHTML = originalContent;
-      
-      // Apply very tight desktop-first styling
-      Object.assign(tempContainer.style, {
-        position: 'absolute',
-        left: '-9999px',
-        top: '0',
-        width: '750px',
-        minWidth: '750px',
-        maxWidth: '750px',
-        backgroundColor: '#ffffff',
-        color: '#374151',
-        padding: '10px',
-        margin: '0',
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '14px',
-        lineHeight: '1.2', // Much tighter line spacing
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'normal',
-        overflow: 'visible',
-        boxSizing: 'border-box',
-        zoom: '1',
-        transform: 'scale(1)',
-      });
-      
-      // Remove all dark mode classes and force light mode
-      tempContainer.className = '';
-      tempContainer.querySelectorAll('*').forEach(el => {
-        el.className = el.className.replace(/dark\S*/g, '').replace(/bg-gray-\S*/g, '').replace(/text-gray-\S*/g, '');
-      });
-      
-      // Find and style the main pre element
-      const preElement = tempContainer.querySelector('pre');
-      if (preElement) {
-        Object.assign(preElement.style, {
-          margin: '0',
-          padding: '0',
-          fontSize: '14px',
-          lineHeight: '1.2',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'normal',
-          color: '#374151',
-          backgroundColor: 'transparent',
-          height: 'auto',
-          maxHeight: 'none',
-        });
+      // Get the structured lyrics data (use the correct props)
+      const lyricsData = editedLyrics || structuredLyrics;
+      if (!lyricsData) {
+        alert('No lyrics data available for export');
+        return;
       }
-      
-      // Style all line containers (divs) with minimal spacing
-      tempContainer.querySelectorAll('div').forEach(div => {
-        Object.assign(div.style, {
-          minHeight: '1.1em',
-          margin: '0',
-          marginBottom: '0px', // Remove line spacing
-          padding: '0',
-          fontSize: '14px',
-          lineHeight: '1.2',
-          height: 'auto',
-        });
-      });
-      
-      // Style all word spans with ultra-minimal spacing
-      tempContainer.querySelectorAll('span').forEach(span => {
-        const isHighlighted = span.className.includes('rhyme-word-highlight') || 
-                            span.className.includes('rhyme-group-');
-        
-        Object.assign(span.style, {
-          fontSize: '14px',
-          fontWeight: isHighlighted ? '600' : 'normal',
-          margin: '0',
-          padding: '0', // No padding even for highlighted words
-          borderRadius: '0',
-          display: 'inline',
-          verticalAlign: 'baseline',
-          color: '#374151',
-          border: 'none',
-          boxShadow: 'none',
-        });
-        
-        // For highlighted words, just use background color with no padding
-        if (isHighlighted && span.style.backgroundColor) {
-          span.style.color = '#2d3748';
-          // Keep background but remove any spacing
-        }
-      });
-      
-      // Add to DOM temporarily
-      document.body.appendChild(tempContainer);
-      
-      // Force multiple reflows and wait longer for complete rendering
-      void tempContainer.offsetHeight;
-      void tempContainer.scrollHeight;
-      
-      // Wait longer for full content to render
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Calculate content height more aggressively
-      const allDivs = tempContainer.querySelectorAll('div');
-      let calculatedHeight = 0;
-      
-      allDivs.forEach(div => {
-        const rect = div.getBoundingClientRect();
-        calculatedHeight += rect.height;
-      });
-      
-      const contentHeight = Math.max(
-        tempContainer.scrollHeight,
-        tempContainer.offsetHeight,
-        calculatedHeight + 50, // Add buffer
-        1200 // Minimum height to ensure we don't cut off
-      );
-      
-      console.log('Content height methods:', {
-        scrollHeight: tempContainer.scrollHeight,
-        offsetHeight: tempContainer.offsetHeight,
-        calculatedHeight: calculatedHeight,
-        finalHeight: contentHeight
-      });
-      
-      // Capture with settings optimized for full content
-      const canvas = await html2canvas(tempContainer, {
-        backgroundColor: '#ffffff',
-        scale: 1.5,
-        logging: true,
-        useCORS: true,
-        allowTaint: false,
+
+      // SVG configuration
+      const config = {
         width: 750,
-        height: contentHeight,
-        windowWidth: 1200,
-        windowHeight: contentHeight + 300, // Extra buffer for window height
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
+        fontSize: 14,
+        lineHeight: 18,
+        padding: 20,
+        wordSpacing: 2,
+        backgroundColor: '#ffffff'
+      };
+
+      // Color mapping for rhyme groups (same as CSS)
+      const rhymeColors = {
+        'a': { bg: '#fca5a5', text: '#7f1d1d' },
+        'b': { bg: '#93c5fd', text: '#1e3a8a' },
+        'c': { bg: '#86efac', text: '#14532d' },
+        'd': { bg: '#fde047', text: '#713f12' },
+        'e': { bg: '#c084fc', text: '#581c87' },
+        'f': { bg: '#fb7185', text: '#881337' },
+        'g': { bg: '#fb923c', text: '#7c2d12' },
+        'h': { bg: '#22d3ee', text: '#164e63' },
+        'i': { bg: '#a3e635', text: '#365314' },
+        'j': { bg: '#e879f9', text: '#701a75' },
+        'k': { bg: '#38bdf8', text: '#0c4a6e' },
+        'l': { bg: '#4ade80', text: '#14532d' },
+        'm': { bg: '#fbbf24', text: '#78350f' },
+        'n': { bg: '#f472b6', text: '#831843' },
+        'o': { bg: '#a855f7', text: '#4c1d95' },
+        'p': { bg: '#06b6d4', text: '#155e75' },
+        'q': { bg: '#ef4444', text: '#7f1d1d' },
+        'r': { bg: '#84cc16', text: '#365314' },
+        's': { bg: '#64748b', text: '#f1f5f9' },
+        't': { bg: '#f59e0b', text: '#78350f' },
+        'u': { bg: '#8b5cf6', text: '#312e81' },
+        'v': { bg: '#10b981', text: '#064e3b' },
+        'w': { bg: '#f97316', text: '#7c2d12' },
+        'x': { bg: '#ec4899', text: '#831843' },
+        'y': { bg: '#06b6d4', text: '#0c4a6e' },
+        'z': { bg: '#eab308', text: '#713f12' },
+        // Numbers 1-20
+        '1': { bg: '#dc2626', text: '#fef2f2' },
+        '2': { bg: '#2563eb', text: '#eff6ff' },
+        '3': { bg: '#16a34a', text: '#f0fdf4' },
+        '4': { bg: '#ca8a04', text: '#fffbeb' },
+        '5': { bg: '#9333ea', text: '#faf5ff' },
+        '6': { bg: '#db2777', text: '#fdf2f8' },
+        '7': { bg: '#ea580c', text: '#fff7ed' },
+        '8': { bg: '#0891b2', text: '#ecfeff' },
+        '9': { bg: '#65a30d', text: '#f7fee7' },
+        '10': { bg: '#c026d3', text: '#fdf4ff' },
+        '11': { bg: '#0284c7', text: '#f0f9ff' },
+        '12': { bg: '#dc2626', text: '#fff1f2' },
+        '13': { bg: '#059669', text: '#ecfdf5' },
+        '14': { bg: '#7c3aed', text: '#f5f3ff' },
+        '15': { bg: '#be123c', text: '#fff1f2' },
+        '16': { bg: '#0369a1', text: '#e0f2fe' },
+        '17': { bg: '#047857', text: '#ecfdf5' },
+        '18': { bg: '#a16207', text: '#fffbeb' },
+        '19': { bg: '#7e22ce', text: '#faf5ff' },
+        '20': { bg: '#be185d', text: '#fdf2f8' },
+        'default': { bg: '#e5e7eb', text: '#374151' }
+      };
+
+      // Function to get color for rhyme group
+      const getRhymeColor = (group) => {
+        if (!group) return rhymeColors.default;
+        const key = group.toLowerCase();
+        return rhymeColors[key] || rhymeColors.default;
+      };
+
+      // Function to measure text width (approximation)
+      const measureTextWidth = (text, fontSize) => {
+        // Rough approximation: each character is about 0.6 * fontSize wide
+        return text.length * fontSize * 0.6;
+      };
+
+      // Build SVG content
+      let svgContent = '';
+      let currentY = config.padding + config.fontSize;
+      let maxWidth = 0;
+
+      // Process each line
+      lyricsData.forEach((line) => {
+        let currentX = config.padding;
+
+        // Process each word in the line
+        line.forEach((word) => {
+          const text = word.text;
+          const rhymeGroup = word.rhymeGroup;
+          const colors = getRhymeColor(rhymeGroup);
+          
+          // Measure text width
+          const textWidth = measureTextWidth(text, config.fontSize);
+          
+          // Check if we need highlighting
+          if (rhymeGroup) {
+            // Create background rectangle for highlighted words
+            const padding = 2;
+            const rectWidth = textWidth + (padding * 2);
+            const rectHeight = config.fontSize + (padding * 2);
+            
+            svgContent += `<rect x="${currentX - padding}" y="${currentY - config.fontSize - padding}" width="${rectWidth}" height="${rectHeight}" fill="${colors.bg}" rx="2"/>`;
+            
+            // Add text with rhyme color
+            svgContent += `<text x="${currentX}" y="${currentY}" font-family="Arial, sans-serif" font-size="${config.fontSize}" font-weight="600" fill="${colors.text}">${text}</text>`;
+          } else {
+            // Regular text
+            svgContent += `<text x="${currentX}" y="${currentY}" font-family="Arial, sans-serif" font-size="${config.fontSize}" fill="#374151">${text}</text>`;
+          }
+          
+          // Move X position for next word
+          currentX += textWidth + config.wordSpacing;
+        });
+
+        // Track maximum width
+        maxWidth = Math.max(maxWidth, currentX);
+        
+        // Move to next line
+        currentY += config.lineHeight;
       });
+
+      // Calculate final dimensions
+      const svgWidth = Math.max(config.width, maxWidth + config.padding);
+      const svgHeight = currentY + config.padding;
+
+      // Create complete SVG
+      const svgString = `
+        <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100%" height="100%" fill="${config.backgroundColor}"/>
+          ${svgContent}
+        </svg>
+      `;
+
+      console.log('SVG dimensions:', svgWidth, 'x', svgHeight);
+
+      // Convert SVG to canvas
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
       
-      // Remove temp container
-      document.body.removeChild(tempContainer);
+      // Create image from SVG
+      const img = new Image();
       
-      console.log('Final canvas dimensions:', canvas.width, 'x', canvas.height);
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = svgUrl;
+      });
+
+      // Create canvas and draw image
+      const canvas = document.createElement('canvas');
+      canvas.width = svgWidth * 2; // Higher resolution
+      canvas.height = svgHeight * 2;
       
-      const imgData = canvas.toDataURL('image/png', 0.9);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2); // High DPI
+      ctx.drawImage(img, 0, 0);
+      
+      // Clean up
+      URL.revokeObjectURL(svgUrl);
+      
+      // Convert to data URL
+      const imgData = canvas.toDataURL('image/png', 0.95);
       
       // Calculate PDF dimensions
-      const pdfWidth = 210;
+      const pdfWidth = 210; // A4 width in mm
       const pdfMargin = 10;
       const imgWidth = pdfWidth - (pdfMargin * 2);
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (svgHeight * imgWidth) / svgWidth;
       
-      // Create PDF with dynamic height
+      // Create PDF
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -356,7 +376,7 @@ const RhymeEditor = ({
       // Add title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, pdfMargin, 15);
+      pdf.text(`${songTitle}`, pdfMargin, 15);
       
       // Add image
       pdf.addImage(imgData, 'PNG', pdfMargin, 25, imgWidth, imgHeight);
@@ -364,8 +384,10 @@ const RhymeEditor = ({
       // Save
       pdf.save(`${songTitle}_rhyme_scheme.pdf`);
       
+      console.log('PDF generated successfully');
+      
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('Error generating SVG PDF:', error);
       alert('Error generating PDF. Please try again.');
     }
   };
