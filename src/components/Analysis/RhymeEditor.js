@@ -192,152 +192,161 @@ const RhymeEditor = ({
     if (!element) return;
 
     try {
-      // Clone the element to avoid modifying the original
-      const clonedElement = element.cloneNode(true);
+      // Get original content
+      const originalContent = element.innerHTML;
       
-      // Create a temporary container with forced desktop styling
+      // Create a completely new container that bypasses mobile constraints
       const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '794px';
-      tempContainer.style.minWidth = '794px';
-      tempContainer.style.maxWidth = '794px';
-      tempContainer.style.backgroundColor = '#ffffff';
-      tempContainer.style.color = '#374151';
-      tempContainer.style.padding = '20px';
-      tempContainer.style.overflow = 'visible';
-      tempContainer.style.boxSizing = 'border-box';
-      tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
-      tempContainer.style.fontSize = '16px'; // Back to normal size
-      tempContainer.style.lineHeight = '1.4'; // Tighter line height
+      tempContainer.innerHTML = originalContent;
       
-      // Force desktop styling on the cloned element
-      clonedElement.style.width = '100%';
-      clonedElement.style.maxWidth = 'none';
-      clonedElement.style.minWidth = 'auto';
-      clonedElement.style.backgroundColor = '#ffffff';
-      clonedElement.style.color = '#374151';
-      clonedElement.style.whiteSpace = 'pre-wrap';
-      clonedElement.style.wordBreak = 'break-word';
-      clonedElement.style.overflow = 'visible';
-      clonedElement.style.fontSize = '16px';
-      clonedElement.style.lineHeight = '1.4';
-      clonedElement.style.margin = '0';
-      clonedElement.style.padding = '0';
-      clonedElement.className = clonedElement.className.replace(/dark/g, '');
+      // Apply aggressive desktop-first styling
+      Object.assign(tempContainer.style, {
+        position: 'absolute',
+        left: '-9999px',
+        top: '0',
+        width: '750px', // Slightly smaller for better fit
+        minWidth: '750px',
+        maxWidth: '750px',
+        backgroundColor: '#ffffff',
+        color: '#374151',
+        padding: '15px',
+        margin: '0',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '15px',
+        lineHeight: '1.3',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'normal',
+        overflow: 'visible',
+        boxSizing: 'border-box',
+        zoom: '1', // Force normal zoom
+        transform: 'scale(1)', // Force normal scale
+      });
       
-      // Apply desktop styling to all child elements
-      const allElements = clonedElement.querySelectorAll('*');
-      allElements.forEach(el => {
-        // Remove any inline dark styles
-        if (el.style.backgroundColor && el.style.backgroundColor !== 'transparent') {
-          el.style.backgroundColor = '';
-        }
-        if (el.style.color) {
-          el.style.color = '#374151';
-        }
+      // Remove all dark mode classes and force light mode
+      tempContainer.className = '';
+      tempContainer.querySelectorAll('*').forEach(el => {
+        el.className = el.className.replace(/dark\S*/g, '').replace(/bg-gray-\S*/g, '').replace(/text-gray-\S*/g, '');
+      });
+      
+      // Find and style the main pre element
+      const preElement = tempContainer.querySelector('pre');
+      if (preElement) {
+        Object.assign(preElement.style, {
+          margin: '0',
+          padding: '0',
+          fontSize: '15px',
+          lineHeight: '1.3',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'normal',
+          color: '#374151',
+          backgroundColor: 'transparent',
+        });
+      }
+      
+      // Style all line containers (divs)
+      tempContainer.querySelectorAll('div').forEach(div => {
+        Object.assign(div.style, {
+          minHeight: '1.2em',
+          margin: '0',
+          marginBottom: '1px',
+          padding: '0',
+          fontSize: '15px',
+          lineHeight: '1.3',
+        });
+      });
+      
+      // Style all word spans with minimal spacing
+      tempContainer.querySelectorAll('span').forEach(span => {
+        const isHighlighted = span.className.includes('rhyme-word-highlight') || 
+                            span.className.includes('rhyme-group-');
         
-        // Force desktop font sizes and spacing
-        if (el.tagName === 'PRE') {
-          el.style.whiteSpace = 'pre-wrap';
-          el.style.wordBreak = 'break-word';
-          el.style.fontSize = '16px';
-          el.style.lineHeight = '1.4';
-          el.style.margin = '0';
-          el.style.padding = '0';
-        }
+        Object.assign(span.style, {
+          fontSize: '15px',
+          fontWeight: isHighlighted ? '600' : 'normal',
+          margin: '0',
+          padding: isHighlighted ? '0px 1px' : '0',
+          borderRadius: isHighlighted ? '1px' : '0',
+          display: 'inline',
+          verticalAlign: 'baseline',
+          color: '#374151',
+        });
         
-        // Force desktop spacing for divs (line containers)
-        if (el.tagName === 'DIV') {
-          el.style.minHeight = '1.3em';
-          el.style.fontSize = '16px';
-          el.style.lineHeight = '1.4';
-          el.style.margin = '0';
-          el.style.marginBottom = '1px'; // Minimal space between lines
-        }
-        
-        // Minimal spacing for spans (words) - much tighter
-        if (el.tagName === 'SPAN') {
-          el.style.fontSize = '16px';
-          el.style.fontWeight = el.classList.contains('rhyme-word-highlight') ? '600' : 'normal';
-          
-          if (el.classList.contains('rhyme-word-highlight')) {
-            // Only highlighted words get minimal padding
-            el.style.borderRadius = '2px';
-            el.style.padding = '0px 1px'; // Extremely minimal padding
-            el.style.margin = '0';
-          } else {
-            // Regular words get no padding at all
-            el.style.padding = '0';
-            el.style.margin = '0';
-          }
-          
-          el.style.display = 'inline';
-          el.style.verticalAlign = 'baseline';
+        // Preserve background colors for highlighted words but make them more subtle
+        if (isHighlighted && span.style.backgroundColor) {
+          // Keep the background color but ensure text is readable
+          span.style.color = '#2d3748';
         }
       });
       
-      tempContainer.appendChild(clonedElement);
+      // Add to DOM temporarily
       document.body.appendChild(tempContainer);
-
-      // Force a reflow and get accurate height
+      
+      // Force multiple reflows to ensure full rendering
       void tempContainer.offsetHeight;
+      void tempContainer.scrollHeight;
       
-      // Wait a moment for full rendering
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Get the actual content height
-      const actualHeight = Math.max(
+      // Get the true content dimensions
+      const contentHeight = Math.max(
         tempContainer.scrollHeight,
         tempContainer.offsetHeight,
-        clonedElement.scrollHeight,
-        clonedElement.offsetHeight
+        Array.from(tempContainer.children).reduce((total, child) => {
+          return total + child.offsetHeight + parseInt(getComputedStyle(child).marginBottom || 0);
+        }, 0)
       );
-
-      // Use higher DPI and force desktop-like capture
+      
+      console.log('Content height:', contentHeight); // Debug log
+      
+      // Capture with optimized settings for full content
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
+        scale: 1.5, // Moderate scale for quality vs performance
+        logging: true, // Enable logging to debug
         useCORS: true,
-        windowWidth: 1200,
-        windowHeight: Math.max(800, actualHeight + 100),
-        width: 794,
-        height: actualHeight,
-        dpi: 150,
         allowTaint: false,
-        removeContainer: false,
+        width: 750,
+        height: contentHeight + 50, // Add buffer
+        windowWidth: 1024, // Force desktop window width
+        windowHeight: contentHeight + 200, // Dynamic window height
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        x: 0,
+        y: 0,
       });
       
       // Remove temp container
       document.body.removeChild(tempContainer);
       
-      const imgData = canvas.toDataURL('image/png', 0.95);
+      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height); // Debug log
       
-      // Calculate dimensions for PDF
+      const imgData = canvas.toDataURL('image/png', 0.9);
+      
+      // Calculate PDF dimensions
       const pdfWidth = 210; // A4 width in mm
-      const imgWidth = pdfWidth - 20; // Leave 10mm margins
+      const pdfMargin = 10;
+      const imgWidth = pdfWidth - (pdfMargin * 2);
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Create single page PDF (most songs should fit)
+      // Create PDF with dynamic height
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [pdfWidth, Math.max(297, imgHeight + 40)]
+        format: [pdfWidth, Math.max(297, imgHeight + 40)] // Dynamic height or A4 minimum
       });
       
       // Add title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 15);
+      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, pdfMargin, 15);
       
-      // Add the entire image
-      pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight, undefined, 'FAST');
+      // Add image
+      pdf.addImage(imgData, 'PNG', pdfMargin, 25, imgWidth, imgHeight);
       
+      // Save
       pdf.save(`${songTitle}_rhyme_scheme.pdf`);
+      
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
