@@ -198,98 +198,80 @@ const RhymeEditor = ({
       // Clone the element to avoid modifying the original
       const clonedElement = element.cloneNode(true);
       
-      // Create a temporary container with mobile-optimized settings
+      // Create a temporary container
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
       tempContainer.style.visibility = 'hidden';
       
-      // Use larger canvas width for mobile to prevent cutoff
+      // Use larger canvas width for mobile
       const canvasWidth = isMobile ? 1200 : 794;
       tempContainer.style.width = `${canvasWidth}px`;
       tempContainer.style.backgroundColor = '#ffffff';
       tempContainer.style.color = '#374151';
       tempContainer.style.padding = '40px';
       tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
+      tempContainer.style.fontSize = isMobile ? '16px' : '14px';
+      tempContainer.style.lineHeight = isMobile ? '1.8' : '1.6';
       
-      // Force light mode and preserve text flow on cloned element
+      // Preserve the original structure but apply light mode
       clonedElement.style.backgroundColor = '#ffffff';
       clonedElement.style.color = '#374151';
       clonedElement.style.width = '100%';
-      clonedElement.style.whiteSpace = 'pre-wrap';
-      clonedElement.style.lineHeight = isMobile ? '1.8' : '1.6';
-      clonedElement.style.fontSize = isMobile ? '16px' : '14px';
-      clonedElement.style.wordSpacing = 'normal';
-      clonedElement.style.letterSpacing = 'normal';
+      clonedElement.style.fontSize = 'inherit';
+      clonedElement.style.lineHeight = 'inherit';
+      
+      // Remove dark mode classes but preserve structure
       clonedElement.className = clonedElement.className.replace(/dark/g, '');
       
-      // Fix the text flow and rhyme highlighting
+      // Apply light mode colors to all elements without changing layout
       const allElements = clonedElement.querySelectorAll('*');
       allElements.forEach(el => {
-        // Remove any dark mode styling
-        if (el.style.backgroundColor && el.style.backgroundColor !== 'transparent') {
-          el.style.backgroundColor = '';
-        }
-        if (el.style.color) {
+        // Only change colors, not layout properties
+        if (el.style.color && el.style.color.includes('rgb')) {
           el.style.color = '#374151';
         }
         
-        // Reset positioning to prevent floating
-        el.style.position = 'static';
-        el.style.float = 'none';
-        el.style.display = '';
-        
-        // Fix rhyme word highlights
+        // Handle rhyme highlights specifically
         if (el.classList.contains('rhyme-word-highlight')) {
-          el.style.display = 'inline';
+          // Don't change display or positioning, just ensure visibility
           el.style.fontSize = isMobile ? '16px' : '14px';
-          el.style.padding = '2px 6px';
-          el.style.margin = '0 1px';
-          el.style.borderRadius = '4px';
           el.style.fontWeight = '600';
-          el.style.verticalAlign = 'baseline';
-          el.style.lineHeight = 'inherit';
-          el.style.whiteSpace = 'nowrap';
+          // Keep original background colors but ensure text is readable
+          if (el.style.color) {
+            // Don't override the rhyme group colors, they should be fine
+          }
         }
-      });
-      
-      // Ensure div elements maintain proper block flow
-      const divElements = clonedElement.querySelectorAll('div');
-      divElements.forEach(div => {
-        div.style.display = 'block';
-        div.style.minHeight = '1.5em';
-        div.style.marginBottom = '0';
-        div.style.wordSpacing = 'normal';
-        div.style.letterSpacing = 'normal';
-      });
-      
-      // Ensure span elements flow inline properly
-      const spanElements = clonedElement.querySelectorAll('span');
-      spanElements.forEach(span => {
-        span.style.display = 'inline';
-        span.style.verticalAlign = 'baseline';
-        span.style.lineHeight = 'inherit';
+        
+        // Remove any dark mode background colors from non-rhyme elements
+        if (!el.classList.contains('rhyme-word-highlight')) {
+          if (el.style.backgroundColor && 
+              (el.style.backgroundColor.includes('gray') || 
+              el.style.backgroundColor.includes('rgb(31') ||
+              el.style.backgroundColor.includes('rgb(55'))) {
+            el.style.backgroundColor = '#ffffff';
+          }
+        }
       });
       
       tempContainer.appendChild(clonedElement);
       document.body.appendChild(tempContainer);
 
       // Wait for layout to settle
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
         scale: isMobile ? 1.5 : 2,
-        logging: false,
+        logging: true, // Enable logging to debug
         useCORS: true,
         windowWidth: canvasWidth,
         width: canvasWidth,
         height: tempContainer.scrollHeight,
         scrollX: 0,
         scrollY: 0,
-        allowTaint: false,
-        removeContainer: false
+        allowTaint: false
       });
       
       // Remove temp container
@@ -306,7 +288,7 @@ const RhymeEditor = ({
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [pdfWidth, Math.max(297, imgHeight + 50)] // Custom height to fit all content
+        format: [pdfWidth, Math.max(297, imgHeight + 50)]
       });
       
       // Add title
@@ -317,7 +299,7 @@ const RhymeEditor = ({
       pdf.setFontSize(10);
       pdf.text('Rhyme Scheme Analysis', 10, 25);
       
-      // Add the entire image as one piece
+      // Add the entire image
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       
       // Save PDF
