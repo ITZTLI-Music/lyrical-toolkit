@@ -195,12 +195,12 @@ const RhymeEditor = ({
       // Clone the element to avoid modifying the original
       const clonedElement = element.cloneNode(true);
       
-      // Create a temporary container with fixed desktop width
+      // Create a temporary container with forced desktop styling
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.width = '794px'; // Fixed A4 width
+      tempContainer.style.width = '794px';
       tempContainer.style.minWidth = '794px';
       tempContainer.style.maxWidth = '794px';
       tempContainer.style.backgroundColor = '#ffffff';
@@ -208,8 +208,11 @@ const RhymeEditor = ({
       tempContainer.style.padding = '20px';
       tempContainer.style.overflow = 'visible';
       tempContainer.style.boxSizing = 'border-box';
+      tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
+      tempContainer.style.fontSize = '16px'; // Force desktop font size
+      tempContainer.style.lineHeight = '1.625'; // Force desktop line height
       
-      // Force the cloned element to expand to full width
+      // Force desktop styling on the cloned element
       clonedElement.style.width = '100%';
       clonedElement.style.maxWidth = 'none';
       clonedElement.style.minWidth = 'auto';
@@ -218,9 +221,11 @@ const RhymeEditor = ({
       clonedElement.style.whiteSpace = 'pre-wrap';
       clonedElement.style.wordBreak = 'break-word';
       clonedElement.style.overflow = 'visible';
+      clonedElement.style.fontSize = '16px'; // Force desktop font size
+      clonedElement.style.lineHeight = '1.625'; // Force desktop line height
       clonedElement.className = clonedElement.className.replace(/dark/g, '');
       
-      // Apply light mode to all child elements
+      // Apply desktop styling to all child elements
       const allElements = clonedElement.querySelectorAll('*');
       allElements.forEach(el => {
         // Remove any inline dark styles
@@ -230,10 +235,29 @@ const RhymeEditor = ({
         if (el.style.color) {
           el.style.color = '#374151';
         }
-        // Ensure proper text wrapping
+        
+        // Force desktop font sizes and spacing
         if (el.tagName === 'PRE') {
           el.style.whiteSpace = 'pre-wrap';
           el.style.wordBreak = 'break-word';
+          el.style.fontSize = '16px';
+          el.style.lineHeight = '1.625';
+        }
+        
+        // Force desktop spacing for divs (line containers)
+        if (el.tagName === 'DIV') {
+          el.style.minHeight = '1.5em';
+          el.style.fontSize = '16px';
+          el.style.lineHeight = '1.625';
+        }
+        
+        // Force desktop styling for spans (words)
+        if (el.tagName === 'SPAN') {
+          el.style.fontSize = '16px';
+          el.style.fontWeight = el.classList.contains('rhyme-word-highlight') ? '600' : 'normal';
+          el.style.borderRadius = '0.25rem';
+          el.style.padding = '1px 4px';
+          el.style.margin = '0 1px';
         }
       });
       
@@ -243,22 +267,25 @@ const RhymeEditor = ({
       // Force a reflow to ensure proper rendering
       void tempContainer.offsetHeight;
 
+      // Use higher DPI and force desktop-like capture
       const canvas = await html2canvas(tempContainer, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 3, // Higher scale for better quality
         logging: false,
         useCORS: true,
-        windowWidth: 794, // Force desktop width
+        windowWidth: 1200, // Force larger window width
+        windowHeight: 800, // Force larger window height
         width: 794,
         height: tempContainer.scrollHeight,
-        onclone: (clonedDoc) => {
-        }
+        dpi: 300, // High DPI for crisp text
+        allowTaint: false,
+        removeContainer: false
       });
       
       // Remove temp container
       document.body.removeChild(tempContainer);
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0); // Max quality
       
       // Calculate dimensions for single page
       const pdfWidth = 210; // A4 width in mm
@@ -269,15 +296,16 @@ const RhymeEditor = ({
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [pdfWidth, imgHeight + 30] // Custom height to fit all content + margins
+        format: [pdfWidth, Math.max(297, imgHeight + 30)] // Ensure minimum A4 height
       });
       
-      // Add title
+      // Add title with proper sizing
       pdf.setFontSize(16);
-      pdf.text(`Rhyme Scheme Analysis: ${songTitle}`, 10, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${songTitle}`, 10, 15);
       
       // Add the entire image in one go
-      pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight, undefined, 'FAST');
       
       // Save PDF
       pdf.save(`${songTitle}_rhyme_scheme.pdf`);
