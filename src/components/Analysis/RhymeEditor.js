@@ -204,7 +204,7 @@ const RhymeEditor = ({
         fontSize: 14,
         lineHeight: 18,
         padding: 20,
-        wordSpacing: 2,
+        wordSpacing: 0,
         backgroundColor: '#ffffff'
       };
 
