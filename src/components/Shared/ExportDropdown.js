@@ -32,15 +32,16 @@ const ExportDropdown = ({ song, onExportTxt, onExportPdf, darkMode }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1 text-sm px-3 py-1 rounded transition-colors ${
+        className={`flex items-center gap-1 text-xs md:text-sm px-2 md:px-3 py-1 rounded transition-colors ${
           darkMode 
             ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
             : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
         }`}
       >
-        <Download className="w-4 h-4" />
-        Export
-        <ChevronDown className="w-3 h-3" />
+        <Download className="w-3 h-3 md:w-4 md:h-4" />
+        <span className="hidden sm:inline">Export</span>
+        <span className="sm:hidden">⬇</span>
+        <ChevronDown className="w-2 h-2 md:w-3 md:h-3" />
       </button>
 
       {isOpen && (

@@ -113,10 +113,10 @@ const UploadTab = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 md:gap-2">
                     <button
                       onClick={() => onSongSelect(song)}
-                      className={`text-sm px-3 py-1 rounded transition-colors ${
+                      className={`text-xs md:text-sm px-2 md:px-3 py-1 rounded transition-colors ${
                         darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                       }`}
                     >
@@ -124,7 +124,7 @@ const UploadTab = ({
                     </button>
                     <button
                       onClick={() => onEditSong(song)}
-                      className={`text-sm px-3 py-1 rounded transition-colors ${
+                      className={`text-xs md:text-sm px-2 md:px-3 py-1 rounded transition-colors ${
                         darkMode ? 'bg-blue-700 hover:bg-blue-600 text-blue-200' : 'bg-blue-200 hover:bg-blue-300 text-blue-700'
                       }`}
                     >
@@ -138,14 +138,14 @@ const UploadTab = ({
                     />
                     <button
                       onClick={() => onDeleteSong(song.id)}
-                      className={`p-1 rounded transition-colors ${
+                      className={`p-0.5 md:p-1 rounded transition-colors ${
                         darkMode 
                           ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
                           : 'text-red-500 hover:bg-red-50 hover:text-red-700'
                       }`}
                       title="Delete song"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                   </div>
                 </div>

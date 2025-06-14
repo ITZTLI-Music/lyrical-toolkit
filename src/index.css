@@ -857,3 +857,25 @@ input:focus {
     z-index: 1000 !important;
   }
 }
+
+/* Additional mobile fixes for song cards and notepad */
+@media (max-width: 768px) {
+  /* Song card containers */
+  .mobile-content .grid gap-3 > div,
+  .mobile-content .space-y-3 > div {
+    padding: 0.75rem !important;
+    margin: 0 !important;
+  }
+  
+  /* Notepad header on mobile */
+  .notepad-header-buttons {
+    flex-shrink: 0 !important;
+    min-width: fit-content !important;
+  }
+  
+  /* Force song cards to fit within viewport */
+  .mobile-content {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}

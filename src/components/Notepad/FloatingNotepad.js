@@ -89,7 +89,7 @@ const FloatingNotepad = ({
               value={title + (hasUnsavedChanges ? '*' : '')}
               onChange={(e) => handleTitleChange({ target: { value: e.target.value.replace('*', '') } })}
               placeholder="Title..."
-              className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 text-xs md:text-sm border rounded min-w-0 max-w-[120px] md:max-w-none ${
+              className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 text-xs md:text-sm border rounded min-w-0 max-w-[100px] md:max-w-none ${
                 darkMode 
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
@@ -99,7 +99,7 @@ const FloatingNotepad = ({
         </div>
 
         {/* Right side - Export buttons (when expanded) + Minimize/Maximize button */}
-        <div className="flex items-center gap-1 flex-shrink-0 notepad-header-buttons">
+        <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0 notepad-header-buttons">
           {!isMinimized && (
             <>
               {/* 1. Upload/Save Song Button - Context Aware */}
