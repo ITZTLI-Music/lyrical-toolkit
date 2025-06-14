@@ -32,7 +32,9 @@ const FloatingNotepad = ({
 
   return (
     <div 
-      className={`fixed z-40 shadow-2xl border transition-all duration-300 ${
+      className={`${isMinimized ? 'fixed' : 'fixed'} shadow-2xl border transition-all duration-300 ${
+        isMinimized ? 'z-50' : 'z-40'
+      } ${
         darkMode 
           ? 'bg-gray-800 border-gray-600' 
           : 'bg-white border-gray-300'
@@ -40,18 +42,18 @@ const FloatingNotepad = ({
       style={
         isMinimized 
           ? {
-              // Collapsed: Bottom bar
+              // Collapsed: Bottom bar - FIXED to viewport bottom
+              position: 'fixed',
               bottom: '0',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 'min(300px, calc(100vw - 32px))', // Responsive width with margins
+              width: 'min(300px, calc(100vw - 32px))',
               height: '40px',
               borderRadius: '8px 8px 0 0',
               borderBottom: 'none',
               resize: 'none',
               overflow: 'hidden',
-              marginLeft: '16px', // Add left margin
-              marginRight: '16px' // Add right margin
+              zIndex: 60 // Higher than the main z-40 to ensure it's always visible
             }
           : {
             // Expanded: Floating window
@@ -89,7 +91,7 @@ const FloatingNotepad = ({
               value={title + (hasUnsavedChanges ? '*' : '')}
               onChange={(e) => handleTitleChange({ target: { value: e.target.value.replace('*', '') } })}
               placeholder="Enter title..."
-              className={`flex-1 px-2 py-1 text-sm border rounded min-w-0 ${
+              className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 text-xs md:text-sm border rounded min-w-0 ${
                 darkMode 
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
