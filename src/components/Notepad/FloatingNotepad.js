@@ -33,7 +33,7 @@ const FloatingNotepad = ({
   return (
     <div 
       className={`fixed shadow-2xl border transition-all duration-300 ${
-        isMinimized ? 'z-50 floating-notepad-minimized' : 'z-40'
+        isMinimized ? 'z-50 md:z-50 z-30 floating-notepad-minimized' : 'z-40'
       } ${
         darkMode 
           ? 'bg-gray-800 border-gray-600' 
