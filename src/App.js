@@ -612,6 +612,15 @@ const LyricsSearchApp = () => {
     if (notepadState.isMinimized) {
       notepadState.toggleMinimized();
     }
+    
+    // Auto-expand to show all buttons on desktop
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile && notepadState.dimensions.width < 520) {
+      notepadState.updateDimensions({
+        width: 520,
+        height: Math.max(notepadState.dimensions.height, 350)
+      });
+    }
   };
   
   const themeClasses = darkMode 

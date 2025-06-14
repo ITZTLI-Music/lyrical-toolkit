@@ -102,38 +102,7 @@ const FloatingNotepad = ({
         <div className="flex items-center gap-1 flex-shrink-0 notepad-header-buttons">
           {!isMinimized && (
             <>
-              <button
-                onClick={onExportTxt}
-                disabled={!content.trim()}
-                className={`p-1 rounded text-xs transition-colors ${
-                  content.trim()
-                    ? darkMode 
-                      ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : darkMode
-                      ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-                title="Export as TXT"
-              >
-                <Download className="w-3 h-3" />
-              </button>
-
-              {/* New Content Button - Only show when editing */}
-              {notepadState.currentEditingSongId && (
-                <button
-                  onClick={onStartNewContent}
-                  className={`p-1 rounded text-xs transition-colors ${
-                    darkMode 
-                      ? 'bg-purple-800 hover:bg-purple-700 text-purple-200' 
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                  }`}
-                  title="Empty Notepad"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              )}
-              {/* Save/Add Button - Context Aware */}
+              {/* 1. Upload/Save Song Button - Context Aware */}
               <button
                 onClick={notepadState.currentEditingSongId ? onSaveChanges : onUploadToSongs}
                 disabled={!content.trim()}
@@ -155,7 +124,40 @@ const FloatingNotepad = ({
                 <Upload className="w-3 h-3" />
               </button>
 
-              {/* Revert Button - Only show when editing */}
+              {/* 2. Export Song Button */}
+              <button
+                onClick={onExportTxt}
+                disabled={!content.trim()}
+                className={`p-1 rounded text-xs transition-colors ${
+                  content.trim()
+                    ? darkMode 
+                      ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : darkMode
+                      ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+                title="Export as TXT"
+              >
+                <Download className="w-3 h-3" />
+              </button>
+
+              {/* 3. Empty Notepad Button - Only show when editing */}
+              {notepadState.currentEditingSongId && (
+                <button
+                  onClick={onStartNewContent}
+                  className={`p-1 rounded text-xs transition-colors ${
+                    darkMode 
+                      ? 'bg-purple-800 hover:bg-purple-700 text-purple-200' 
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                  title="Empty Notepad"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              )}
+
+              {/* 4. Revert Changes Button - Only show when editing */}
               {notepadState.currentEditingSongId && (
                 <button
                   onClick={onRevertChanges}
