@@ -28,8 +28,13 @@ const ExportDropdown = ({ song, onExportTxt, onExportPdf, darkMode }) => {
       const viewportHeight = window.innerHeight;
       const dropdownHeight = 80; // Approximate height of dropdown
       
+      // Account for notepad height on mobile (40px + some padding)
+      const isMobile = window.innerWidth <= 768;
+      const notepadHeight = isMobile ? 50 : 0;
+      const availableHeight = viewportHeight - notepadHeight;
+      
       // If there's not enough space below, show above
-      if (buttonRect.bottom + dropdownHeight > viewportHeight) {
+      if (buttonRect.bottom + dropdownHeight > availableHeight) {
         setDropdownPosition('top');
       } else {
         setDropdownPosition('bottom');
