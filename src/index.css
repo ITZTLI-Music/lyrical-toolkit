@@ -879,3 +879,21 @@ input:focus {
     padding-right: 0.5rem !important;
   }
 }
+
+/* Additional mobile utilities for better responsive behavior */
+@media (max-width: 768px) {
+  /* Ensure z-index works properly on mobile */
+  .z-50 {
+    z-index: 50 !important;
+  }
+  
+  /* Prevent dropdown overflow on mobile */
+  .export-dropdown-mobile {
+    max-width: calc(100vw - 20px) !important;
+  }
+}
+
+/* High z-index for dropdowns to appear above all content */
+.z-50 {
+  z-index: 50;
+}

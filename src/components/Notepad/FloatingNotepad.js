@@ -124,11 +124,13 @@ const FloatingNotepad = ({
                 <Upload className="w-3 h-3" />
               </button>
 
-              {/* 2. Export Song Button */}
+              {/* 2. Export Song Button - Hide on mobile when editing */}
               <button
                 onClick={onExportTxt}
                 disabled={!content.trim()}
                 className={`p-1 rounded text-xs transition-colors ${
+                  notepadState.currentEditingSongId ? 'hidden md:block' : ''
+                } ${
                   content.trim()
                     ? darkMode 
                       ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
