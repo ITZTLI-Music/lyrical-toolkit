@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload, Plus, FileText, Trash2 } from 'lucide-react';
+import ExportDropdown from '../Shared/ExportDropdown';
 
 const UploadTab = ({ 
   songs,
@@ -7,6 +8,9 @@ const UploadTab = ({
   onDeleteSong,
   onDeleteAllSongs,
   onSongSelect,
+  onEditSong,
+  onExportTxt,
+  onExportPdf,
   isDragging,
   handleDragOver,
   handleDragLeave,
@@ -118,6 +122,20 @@ const UploadTab = ({
                     >
                       View
                     </button>
+                    <button
+                      onClick={() => onEditSong(song)}
+                      className={`text-sm px-3 py-1 rounded transition-colors ${
+                        darkMode ? 'bg-blue-700 hover:bg-blue-600 text-blue-200' : 'bg-blue-200 hover:bg-blue-300 text-blue-700'
+                      }`}
+                    >
+                      Edit
+                    </button>
+                    <ExportDropdown 
+                      song={song}
+                      onExportTxt={onExportTxt}
+                      onExportPdf={onExportPdf}
+                      darkMode={darkMode}
+                    />
                     <button
                       onClick={() => onDeleteSong(song.id)}
                       className={`p-1 rounded transition-colors ${

@@ -1,11 +1,16 @@
 import React from 'react';
-import { Edit3, Minimize2, Maximize2, Download, Upload } from 'lucide-react';
+import { Edit3, Minimize2, Maximize2, Download, Upload, RotateCcw, Plus } from 'lucide-react';
 
 const FloatingNotepad = ({ 
   notepadState, 
   darkMode, 
   onExportTxt, 
-  onUploadToSongs 
+  onUploadToSongs,
+  onSaveChanges,
+  onRevertChanges,
+  onStartNewContent,
+  hasUnsavedChanges,
+  originalSongContent
 }) => {
   const {
     content,
@@ -76,13 +81,13 @@ const FloatingNotepad = ({
               className={`text-sm font-medium cursor-pointer truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               onClick={toggleMinimized}
             >
-              {title || 'Notepad'}
+              {title || 'Notepad'}{hasUnsavedChanges ? '*' : ''}
             </span>
           ) : (
             <input
               type="text"
-              value={title}
-              onChange={handleTitleChange}
+              value={title + (hasUnsavedChanges ? '*' : '')}
+              onChange={(e) => handleTitleChange({ target: { value: e.target.value.replace('*', '') } })}
               placeholder="Enter title..."
               className={`flex-1 px-2 py-1 text-sm border rounded min-w-0 ${
                 darkMode 
@@ -113,22 +118,62 @@ const FloatingNotepad = ({
               >
                 <Download className="w-3 h-3" />
               </button>
+
+              {/* New Content Button - Only show when editing */}
+              {notepadState.currentEditingSongId && (
+                <button
+                  onClick={onStartNewContent}
+                  className={`p-1 rounded text-xs transition-colors ${
+                    darkMode 
+                      ? 'bg-purple-800 hover:bg-purple-700 text-purple-200' 
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                  title="Reset Notepad"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              )}
+              {/* Save/Add Button - Context Aware */}
               <button
-                onClick={onUploadToSongs}
+                onClick={notepadState.currentEditingSongId ? onSaveChanges : onUploadToSongs}
                 disabled={!content.trim()}
                 className={`p-1 rounded text-xs transition-colors ${
                   content.trim()
-                    ? darkMode 
-                      ? 'bg-green-800 hover:bg-green-700 text-green-200' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
+                    ? notepadState.currentEditingSongId
+                      ? darkMode 
+                        ? 'bg-blue-800 hover:bg-blue-700 text-blue-200' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : darkMode 
+                        ? 'bg-green-800 hover:bg-green-700 text-green-200' 
+                        : 'bg-green-600 hover:bg-green-700 text-white'
                     : darkMode
                       ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
-                title="Add to Songs"
+                title={notepadState.currentEditingSongId ? "Save Changes" : "Add to Songs"}
               >
                 <Upload className="w-3 h-3" />
               </button>
+
+              {/* Revert Button - Only show when editing */}
+              {notepadState.currentEditingSongId && (
+                <button
+                  onClick={onRevertChanges}
+                  disabled={!hasUnsavedChanges}
+                  className={`p-1 rounded text-xs transition-colors ${
+                    hasUnsavedChanges
+                      ? darkMode 
+                        ? 'bg-orange-800 hover:bg-orange-700 text-orange-200' 
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      : darkMode
+                        ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                  title="Revert to Original"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )}
             </>
           )}
           

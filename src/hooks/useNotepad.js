@@ -6,6 +6,7 @@ export const useNotepad = () => {
   const [isMinimized, setIsMinimized] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
   const [position, setPosition] = useState({ bottom: 20, right: 20 });
+  const [currentEditingSongId, setCurrentEditingSongId] = useState(null);
 
   // Load saved state on mount
   useEffect(() => {
@@ -18,6 +19,7 @@ export const useNotepad = () => {
         setIsMinimized(parsed.isMinimized ?? true);
         setDimensions(parsed.dimensions || { width: 400, height: 300 });
         setPosition(parsed.position || { bottom: 20, right: 20 });
+        setCurrentEditingSongId(null);
       }
     } catch (error) {
       console.error('Error loading notepad state:', error);
@@ -66,16 +68,24 @@ export const useNotepad = () => {
     saveToStorage({ dimensions: newDimensions });
   }, [saveToStorage]);
 
+  // Update current editing song ID
+  const updateCurrentEditingSongId = useCallback((songId) => {
+    setCurrentEditingSongId(songId);
+    saveToStorage({ currentEditingSongId: songId });
+  }, [saveToStorage]);
+
   return {
     content,
     title,
     isMinimized,
     dimensions,
     position,
+    currentEditingSongId,
     updateContent,
     updateTitle,
     toggleMinimized,
     updateDimensions,
-    setPosition
+    setPosition,
+    setCurrentEditingSongId: updateCurrentEditingSongId
   };
 };

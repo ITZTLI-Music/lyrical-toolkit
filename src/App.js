@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Book, Shuffle, Music } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Import utilities
 import { 
@@ -80,8 +82,14 @@ const LyricsSearchApp = () => {
 
   //Notepad hook
   const notepadState = useNotepad();
+  const [originalSongContent, setOriginalSongContent] = useState('');
 
-// Load example song only when needed
+  // Calculate if there are unsaved changes - moved to top to avoid initialization issues
+  const hasUnsavedChanges = notepadState.currentEditingSongId && 
+    originalSongContent !== '' &&
+    (notepadState.content !== originalSongContent);
+
+  // Load example song only when needed
   const loadingExampleRef = useRef(false);
   const [userSongsLoaded, setUserSongsLoaded] = useState(false);
   
@@ -175,7 +183,7 @@ const LyricsSearchApp = () => {
       }
     }
   }, [songs, selectedStatsFilter]);
-  
+
   // Enhanced statistics with song filtering
   const stats = useMemo(() => {
     const filteredSongs = selectedStatsFilter === 'all' 
@@ -482,6 +490,12 @@ const LyricsSearchApp = () => {
   const handleUploadToSongs = () => {
     if (!notepadState.content.trim()) return;
     
+    // Should only create new song when NOT editing
+    if (notepadState.currentEditingSongId) {
+      console.error('handleUploadToSongs called while editing - this should not happen');
+      return;
+    }
+    
     const newSong = {
       id: Date.now() + Math.random(),
       title: notepadState.title || 'Untitled',
@@ -494,11 +508,112 @@ const LyricsSearchApp = () => {
     
     setSongs(prev => [newSong, ...prev]);
     
-    // Optionally clear the notepad after uploading
-    // notepadState.updateContent('');
-    // notepadState.updateTitle('Untitled');
+    // Optionally clear notepad after upload
+    notepadState.updateContent('');
+    notepadState.updateTitle('Untitled');
   };
 
+  const handleSaveChanges = () => {
+    if (!notepadState.currentEditingSongId || !notepadState.content.trim()) return;
+    
+    setSongs(prev => prev.map(song => {
+      if (song.id === notepadState.currentEditingSongId) {
+        return {
+          ...song,
+          title: notepadState.title || song.title,
+          lyrics: notepadState.content,
+          wordCount: notepadState.content.split(/\s+/).filter(word => word.length > 0).length,
+          dateModified: new Date().toISOString()
+        };
+      }
+      return song;
+    }));
+    
+    // Update original content to match current content
+    setOriginalSongContent(notepadState.content);
+    
+    // Show success message
+    alert('Song saved successfully!');
+  };
+
+  const handleRevertChanges = () => {
+    if (!notepadState.currentEditingSongId || !originalSongContent) return;
+    
+    const confirmRevert = window.confirm('Are you sure you want to revert to the original content? All changes will be lost.');
+    if (!confirmRevert) return;
+    
+    notepadState.updateContent(originalSongContent);
+    
+    // Find original song title
+    const originalSong = songs.find(song => song.id === notepadState.currentEditingSongId);
+    if (originalSong) {
+      notepadState.updateTitle(originalSong.title);
+    }
+  };
+
+  const handleStartNewContent = () => {
+    if (hasUnsavedChanges) {
+      const confirmNew = window.confirm('You have unsaved changes. Reset Notepad?');
+      if (!confirmNew) return;
+    }
+    
+    notepadState.updateContent('');
+    notepadState.updateTitle('Untitled');
+    notepadState.setCurrentEditingSongId(null);
+    setOriginalSongContent('');
+  };
+
+  const handleExportSongTxt = (song) => {
+    const blob = new Blob([song.lyrics], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${song.title}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSongPdf = async (song) => {
+    try {
+      const pdf = new jsPDF();
+      
+      // Add title
+      pdf.setFontSize(16);
+      pdf.text(song.title, 20, 20);
+      
+      // Add lyrics
+      pdf.setFontSize(12);
+      const splitText = pdf.splitTextToSize(song.lyrics, 170);
+      pdf.text(splitText, 20, 40);
+      
+      pdf.save(`${song.title}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
+  const handleEditSong = (song) => {
+    // Check if there are unsaved changes
+    if (notepadState.currentEditingSongId && hasUnsavedChanges) {
+      const confirmSwitch = window.confirm('You have unsaved changes. Switch to editing a different song?');
+      if (!confirmSwitch) return;
+    }
+    
+    // Load song into notepad
+    notepadState.updateContent(song.lyrics);
+    notepadState.updateTitle(song.title);
+    notepadState.setCurrentEditingSongId(song.id);
+    setOriginalSongContent(song.lyrics);
+    
+    // Expand notepad if minimized
+    if (notepadState.isMinimized) {
+      notepadState.toggleMinimized();
+    }
+  };
+  
   const themeClasses = darkMode 
     ? 'dark bg-gray-900 text-white' 
     : 'bg-gray-50 text-gray-900';
@@ -690,6 +805,9 @@ const LyricsSearchApp = () => {
                 onDeleteSong={deleteSong}
                 onDeleteAllSongs={deleteAllSongs}
                 onSongSelect={setSelectedSong}
+                onEditSong={handleEditSong}
+                onExportTxt={handleExportSongTxt}
+                onExportPdf={handleExportSongPdf}
                 isDragging={fileUploadHook.isDragging}
                 handleDragOver={fileUploadHook.handleDragOver}
                 handleDragLeave={fileUploadHook.handleDragLeave}
@@ -729,6 +847,11 @@ const LyricsSearchApp = () => {
         darkMode={darkMode}
         onExportTxt={handleExportTxt}
         onUploadToSongs={handleUploadToSongs}
+        onSaveChanges={handleSaveChanges}
+        onRevertChanges={handleRevertChanges}
+        onStartNewContent={handleStartNewContent}
+        hasUnsavedChanges={hasUnsavedChanges}
+        originalSongContent={originalSongContent}
       />
     </div>
   );
