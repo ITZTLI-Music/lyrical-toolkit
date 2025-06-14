@@ -4,9 +4,18 @@ export const useNotepad = () => {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('Untitled');
   const [isMinimized, setIsMinimized] = useState(true);
-  const [dimensions, setDimensions] = useState({ width: 480, height: 350 });
   const [position, setPosition] = useState({ bottom: 20, right: 20 });
   const [currentEditingSongId, setCurrentEditingSongId] = useState(null);
+
+  const [dimensions, setDimensions] = useState(() => {
+    // Responsive default dimensions
+    const isMobile = window.innerWidth <= 768;
+    return isMobile 
+      ? { width: Math.min(400, window.innerWidth - 40), height: 300 }
+      : { width: 480, height: 350 };
+  });
+
+  
 
   // Load saved state on mount
   useEffect(() => {
@@ -17,9 +26,14 @@ export const useNotepad = () => {
         setContent(parsed.content || '');
         setTitle(parsed.title || 'Untitled');
         setIsMinimized(parsed.isMinimized ?? true);
-        setDimensions(parsed.dimensions || { width: 480, height: 350 });
         setPosition(parsed.position || { bottom: 20, right: 20 });
         setCurrentEditingSongId(null);
+        setDimensions(parsed.dimensions || (() => {
+          const isMobile = window.innerWidth <= 768;
+          return isMobile 
+            ? { width: Math.min(400, window.innerWidth - 40), height: 300 }
+            : { width: 480, height: 350 };
+        })());
       }
     } catch (error) {
       console.error('Error loading notepad state:', error);

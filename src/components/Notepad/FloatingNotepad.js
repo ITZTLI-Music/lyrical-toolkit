@@ -32,8 +32,8 @@ const FloatingNotepad = ({
 
   return (
     <div 
-      className={`${isMinimized ? 'fixed' : 'fixed'} shadow-2xl border transition-all duration-300 ${
-        isMinimized ? 'z-50' : 'z-40'
+      className={`fixed shadow-2xl border transition-all duration-300 ${
+        isMinimized ? 'z-50 floating-notepad-minimized' : 'z-40'
       } ${
         darkMode 
           ? 'bg-gray-800 border-gray-600' 
@@ -43,7 +43,6 @@ const FloatingNotepad = ({
         isMinimized 
           ? {
               // Collapsed: Bottom bar - FIXED to viewport bottom
-              position: 'fixed',
               bottom: '0',
               left: '50%',
               transform: 'translateX(-50%)',
@@ -52,8 +51,7 @@ const FloatingNotepad = ({
               borderRadius: '8px 8px 0 0',
               borderBottom: 'none',
               resize: 'none',
-              overflow: 'hidden',
-              zIndex: 60 // Higher than the main z-40 to ensure it's always visible
+              overflow: 'hidden'
             }
           : {
             // Expanded: Floating window
@@ -64,8 +62,8 @@ const FloatingNotepad = ({
             borderRadius: '8px',
             resize: 'both',
             overflow: 'hidden',
-            minWidth: '480px',
-            minHeight: '300px'
+            minWidth: '200px',
+            minHeight: '200px'
           }
       }
     >

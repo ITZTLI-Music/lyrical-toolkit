@@ -846,3 +846,14 @@ input:focus {
   width: device-width;
   zoom: 1.0;
 }
+
+/* Ensure notepad sticks to bottom on mobile */
+@media (max-width: 768px) {
+  .floating-notepad-minimized {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 1000 !important;
+  }
+}
