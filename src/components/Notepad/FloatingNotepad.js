@@ -64,8 +64,8 @@ const FloatingNotepad = ({
             borderRadius: '8px',
             resize: 'both',
             overflow: 'hidden',
-            minWidth: '200px',
-            minHeight: '200px'
+            minWidth: '480px',
+            minHeight: '300px'
           }
       }
     >
@@ -90,8 +90,8 @@ const FloatingNotepad = ({
               type="text"
               value={title + (hasUnsavedChanges ? '*' : '')}
               onChange={(e) => handleTitleChange({ target: { value: e.target.value.replace('*', '') } })}
-              placeholder="Enter title..."
-              className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 text-xs md:text-sm border rounded min-w-0 ${
+              placeholder="Title..."
+              className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 text-xs md:text-sm border rounded min-w-0 max-w-[120px] md:max-w-none ${
                 darkMode 
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
@@ -130,7 +130,7 @@ const FloatingNotepad = ({
                       ? 'bg-purple-800 hover:bg-purple-700 text-purple-200' 
                       : 'bg-purple-600 hover:bg-purple-700 text-white'
                   }`}
-                  title="Reset Notepad"
+                  title="Empty Notepad"
                 >
                   <Plus className="w-3 h-3" />
                 </button>

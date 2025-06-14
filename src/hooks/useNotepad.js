@@ -4,7 +4,7 @@ export const useNotepad = () => {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('Untitled');
   const [isMinimized, setIsMinimized] = useState(true);
-  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
+  const [dimensions, setDimensions] = useState({ width: 480, height: 350 });
   const [position, setPosition] = useState({ bottom: 20, right: 20 });
   const [currentEditingSongId, setCurrentEditingSongId] = useState(null);
 
@@ -17,7 +17,7 @@ export const useNotepad = () => {
         setContent(parsed.content || '');
         setTitle(parsed.title || 'Untitled');
         setIsMinimized(parsed.isMinimized ?? true);
-        setDimensions(parsed.dimensions || { width: 400, height: 300 });
+        setDimensions(parsed.dimensions || { width: 480, height: 350 });
         setPosition(parsed.position || { bottom: 20, right: 20 });
         setCurrentEditingSongId(null);
       }
@@ -41,7 +41,7 @@ export const useNotepad = () => {
     } catch (error) {
       console.error('Error saving notepad state:', error);
     }
-  }, [content, title, isMinimized, dimensions, position]);
+  }, [content, title, isMinimized, dimensions, position, currentEditingSongId]);
 
   // Update content with auto-save
   const updateContent = useCallback((newContent) => {
