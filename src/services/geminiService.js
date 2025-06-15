@@ -44,7 +44,7 @@ class GeminiService {
     this.cache.delete(cacheKey);
     console.log(`Cleared cache for ${analysisType} analysis`);
   }
-  
+
   async analyzeLyricalCoherence(lyrics, songTitle = "Unknown Song") {
     if (!this.genAI) {
       throw new Error('Gemini API not initialized. Please check your API key.');
@@ -223,14 +223,22 @@ Return JSON with this EXACT structure in mind:
 }`;
   }
 
-  async analyzePerformanceAndStyle(lyrics, songTitle = "Unknown Song") {
+  async analyzePerformanceAndStyle(lyrics, songTitle = "Unknown Song", forceFresh = false) {
     if (!this.genAI) {
       throw new Error('Gemini API not initialized. Please check your API key.');
     }
 
-    // Check cache first
+    // Generate cache key
     const cacheKey = this.generateCacheKey(lyrics, 'performance');
-    if (this.cache.has(cacheKey)) {
+    
+    // Clear cache if forced refresh
+    if (forceFresh) {
+      this.cache.delete(cacheKey);
+      console.log('Forced cache clear for performance analysis');
+    }
+
+    // Check cache (unless forced fresh)
+    if (!forceFresh && this.cache.has(cacheKey)) {
       console.log('Returning cached performance analysis');
       return { ...this.cache.get(cacheKey), fromCache: true };
     }
@@ -334,10 +342,22 @@ Return JSON with this EXACT structure in mind:
       
     } catch (error) {
       console.error('Error analyzing performance and style:', error);
+      
+      // Don't cache errors, and provide more specific error messages
+      if (error.message.includes('Rate limit exceeded')) {
+        return {
+          success: false,
+          error: error.message,
+          fromCache: false,
+          retryable: true
+        };
+      }
+      
       return {
         success: false,
-        error: error.message,
-        fromCache: false
+        error: `Analysis failed: ${error.message}. Please try again.`,
+        fromCache: false,
+        retryable: true
       };
     }
   }

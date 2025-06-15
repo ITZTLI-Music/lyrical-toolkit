@@ -120,36 +120,35 @@ const AnalysisTab = ({
     setCoherenceLoading(false);
   };
 
-  const handlePerformanceAnalysis = async (forceClearCache = false) => {
-  if (!selectedSongForAnalysis) return;
-  const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
-  if (!song) return;
+  const handlePerformanceAnalysis = async (forceFresh = false) => {
+    if (!selectedSongForAnalysis) return;
+    const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
+    if (!song) return;
 
-  // Clear cache if this is a re-analysis (when called from the re-analyze button)
-  if (forceClearCache) {
-    geminiService.clearCacheForSong(song.lyrics, 'performance');
-  }
+    console.log(`Performance analysis started. Force fresh: ${forceFresh}`);
 
-  // Clear writing quality results when running performance analysis
-  setAnalysisResults(null);
-  setAnalysisType(null);
+    // Clear writing quality results when running performance analysis
+    setAnalysisResults(null);
+    setAnalysisType(null);
 
-  setPerformanceLoading(true);
-  setPerformanceResults(null);
-  
-  try {
-    const result = await geminiService.analyzePerformanceAndStyle(song.lyrics, song.title);
-    setPerformanceResults(result);
-  } catch (error) {
-    console.error('Error in performance analysis:', error);
-    setPerformanceResults({
-      success: false,
-      error: error.message
-    });
-  }
-  
-  setPerformanceLoading(false);
-};
+    setPerformanceLoading(true);
+    setPerformanceResults(null);
+    
+    try {
+      const result = await geminiService.analyzePerformanceAndStyle(song.lyrics, song.title, forceFresh);
+      setPerformanceResults(result);
+      console.log('Performance analysis completed:', result.success ? 'Success' : 'Failed');
+    } catch (error) {
+      console.error('Error in performance analysis:', error);
+      setPerformanceResults({
+        success: false,
+        error: error.message,
+        retryable: true
+      });
+    }
+    
+    setPerformanceLoading(false);
+  };
 
   const handleRhymeScheme = () => {
     if (!selectedSongForAnalysis) return;
@@ -1056,12 +1055,24 @@ const AnalysisTab = ({
              </div>
            ) : (
              <div className={`p-4 rounded border ${
-               darkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
-             }`}>
-               <p className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
-                 ❌ Analysis failed: {performanceResults.error}
-               </p>
-             </div>
+                darkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
+              }`}>
+                <p className={`text-sm mb-3 ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+                  ❌ Analysis failed: {performanceResults.error}
+                </p>
+                {performanceResults.retryable && (
+                  <button
+                    onClick={() => handlePerformanceAnalysis(true)}
+                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                      darkMode 
+                        ? 'bg-red-800 hover:bg-red-700 text-red-200' 
+                        : 'bg-red-200 hover:bg-red-300 text-red-800'
+                    }`}
+                  >
+                    Try Again (Force Fresh)
+                  </button>
+                )}
+              </div>
            )}
          </div>
        </div>
