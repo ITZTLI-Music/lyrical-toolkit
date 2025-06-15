@@ -63,22 +63,18 @@ const Header = ({
           </div>
           
           {/* Mobile tabs */}
-          <div className="flex justify-center">
-            <div className="flex gap-2 flex-wrap justify-center">
-              {['dictionary', 'synonyms', 'rhymes','upload','search', 'analysis', 'stats'].map((tab) => {
+          <div className="space-y-2">
+            {/* First row: Dictionary, Synonyms, Rhymes */}
+            <div className="flex justify-center gap-2">
+              {['dictionary', 'synonyms', 'rhymes'].map((tab) => {
                 const icons = {
-                  search: Search,
                   dictionary: Book,
                   synonyms: Shuffle,
-                  rhymes: Music,
-                  analysis: BarChart3,
-                  upload: Upload,
-                  stats: BarChart3
+                  rhymes: Music
                 };
                 const Icon = icons[tab];
                 
                 const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
-                const isUploadTab = tab === 'upload';
 
                 return (
                   <button
@@ -92,13 +88,67 @@ const Header = ({
                         ? darkMode 
                           ? 'bg-black text-white'
                           : 'bg-gray-900 text-white'
-                        : isUploadTab
-                          ? darkMode
-                            ? 'bg-blue-700 text-blue-200 hover:bg-blue-600 hover:text-white border-2 border-blue-500'
-                            : 'bg-blue-200 text-blue-800 hover:bg-blue-300 border-2 border-blue-400'
-                          : darkMode
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : darkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3 inline mr-1" />
+                    {displayName}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Second row: Upload (centered) */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  setActiveTab('upload');
+                  setShowManual(false);
+                }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors text-xs ${
+                  activeTab === 'upload' && !showManual
+                    ? darkMode 
+                      ? 'bg-black text-white'
+                      : 'bg-gray-900 text-white'
+                    : darkMode
+                      ? 'bg-blue-700 text-blue-200 hover:bg-blue-600 hover:text-white border-2 border-blue-500'
+                      : 'bg-blue-200 text-blue-800 hover:bg-blue-300 border-2 border-blue-400'
+                }`}
+              >
+                <Upload className="w-3 h-3 inline mr-1" />
+                Upload
+              </button>
+            </div>
+
+            {/* Third row: Search, Analysis, Stats */}
+            <div className="flex justify-center gap-2">
+              {['search', 'analysis', 'stats'].map((tab) => {
+                const icons = {
+                  search: Search,
+                  analysis: BarChart3,
+                  stats: BarChart3
+                };
+                const Icon = icons[tab];
+                
+                const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
+
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setShowManual(false);
+                    }}
+                    className={`px-3 py-2 rounded-lg font-medium transition-colors text-xs ${
+                      activeTab === tab && !showManual
+                        ? darkMode 
+                          ? 'bg-black text-white'
+                          : 'bg-gray-900 text-white'
+                        : darkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <Icon className="w-3 h-3 inline mr-1" />
