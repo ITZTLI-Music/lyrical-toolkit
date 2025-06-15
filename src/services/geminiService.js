@@ -38,6 +38,13 @@ class GeminiService {
     return Math.max(0, this.rateLimitMs - timeSince);
   }
 
+  // Clear cache for a specific song and analysis type
+  clearCacheForSong(lyrics, analysisType) {
+    const cacheKey = this.generateCacheKey(lyrics, analysisType);
+    this.cache.delete(cacheKey);
+    console.log(`Cleared cache for ${analysisType} analysis`);
+  }
+  
   async analyzeLyricalCoherence(lyrics, songTitle = "Unknown Song") {
     if (!this.genAI) {
       throw new Error('Gemini API not initialized. Please check your API key.');
@@ -94,20 +101,47 @@ class GeminiService {
         analysisData.references = Array.isArray(analysisData.references) ? analysisData.references : [];
         
       } catch (parseError) {
-        console.error('Coherence JSON parse error:', parseError);
+        console.error('Performance JSON parse error:', parseError);
         console.error('Failed to parse:', text);
         
-        // Fallback response
-        analysisData = {
-          coherenceScore: 70,
-          storyFlow: 'fair',
-          thematicUnity: 'fair',
-          narrativeConsistency: 'fair',
-          sectionConnections: 'fair',
-          overallAssessment: 'Analysis completed with technical fallback.',
-          observations: ['Song structure is present', 'Try the analysis again for more detailed insights'],
-          references: []
+        // Fallback response - DON'T CACHE FALLBACKS
+        const fallbackData = {
+          success: false,
+          error: 'AI analysis parsing failed, try again for better results',
+          fromCache: false,
+          fallbackData: {
+            vocalFlow: {
+              overallRating: 'moderate',
+              flowPatterns: ['Analysis completed with technical fallback'],
+              difficultSections: []
+            },
+            breathControl: {
+              rating: 'fair',
+              naturalBreaks: [],
+              challengingSections: []
+            },
+            performanceDynamics: {
+              energyMapping: [{ section: 'overall', energy: 'moderate', description: 'Consistent energy level' }]
+            },
+            repetitionAnalysis: {
+              effectiveRepeats: [],
+              overusedPhrases: [],
+              missedOpportunities: []
+            },
+            emotionalProgression: {
+              arc: ['steady emotional tone'],
+              keyMoments: []
+            },
+            eraInfluence: {
+              primaryEra: 'contemporary',
+              influences: [],
+              modernElements: []
+            }
+          }
         };
+        
+        // DON'T cache fallback results
+        return fallbackData;
       }
       
       const result_data = {
@@ -116,7 +150,7 @@ class GeminiService {
         ...analysisData
       };
       
-      // Cache the result
+      // Cache the result (only successful analyses)
       this.cache.set(cacheKey, result_data);
       
       return result_data;

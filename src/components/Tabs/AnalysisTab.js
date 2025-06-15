@@ -120,10 +120,15 @@ const AnalysisTab = ({
     setCoherenceLoading(false);
   };
 
-  const handlePerformanceAnalysis = async () => {
+  const handlePerformanceAnalysis = async (forceClearCache = false) => {
   if (!selectedSongForAnalysis) return;
   const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
   if (!song) return;
+
+  // Clear cache if this is a re-analysis (when called from the re-analyze button)
+  if (forceClearCache) {
+    geminiService.clearCacheForSong(song.lyrics, 'performance');
+  }
 
   // Clear writing quality results when running performance analysis
   setAnalysisResults(null);
@@ -131,20 +136,20 @@ const AnalysisTab = ({
 
   setPerformanceLoading(true);
   setPerformanceResults(null);
-    
-    try {
-      const result = await geminiService.analyzePerformanceAndStyle(song.lyrics, song.title);
-      setPerformanceResults(result);
-    } catch (error) {
-      console.error('Error in performance analysis:', error);
-      setPerformanceResults({
-        success: false,
-        error: error.message
-      });
-    }
-    
-    setPerformanceLoading(false);
-  };
+  
+  try {
+    const result = await geminiService.analyzePerformanceAndStyle(song.lyrics, song.title);
+    setPerformanceResults(result);
+  } catch (error) {
+    console.error('Error in performance analysis:', error);
+    setPerformanceResults({
+      success: false,
+      error: error.message
+    });
+  }
+  
+  setPerformanceLoading(false);
+};
 
   const handleRhymeScheme = () => {
     if (!selectedSongForAnalysis) return;
@@ -260,8 +265,8 @@ const AnalysisTab = ({
         </button>
         
         <button
-          onClick={handlePerformanceAnalysis}
-          disabled={!selectedSongForAnalysis}
+          onClick={() => handlePerformanceAnalysis(true)}
+          disabled={performanceLoading}
           className={`p-4 rounded-lg border transition-colors ${
             selectedSongForAnalysis
               ? darkMode 
@@ -766,7 +771,7 @@ const AnalysisTab = ({
                 🎤 Performance & Style Analysis: "{songs.find(s => s.id.toString() === selectedSongForAnalysis)?.title}"
               </h3>
               <button
-                onClick={handlePerformanceAnalysis}
+                onClick={() => handlePerformanceAnalysis(false)}
                 disabled={performanceLoading}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   performanceLoading
@@ -883,13 +888,13 @@ const AnalysisTab = ({
                  </div>
                </div>
 
-               {/* Performance Dynamics Section */}
+               {/* Energy & Mood Dynamics Section */}
                {performanceResults.performanceDynamics.energyMapping && performanceResults.performanceDynamics.energyMapping.length > 0 && (
                  <div className={`p-4 rounded border ${
                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                  }`}>
                    <h4 className={`font-medium mb-3 ${darkMode ? 'text-purple-300' : 'text-purple-800'}`}>
-                     ⚡ Performance Dynamics
+                     ⚡ Energy & Mood Dynamics
                    </h4>
                    <div className="space-y-2">
                      {performanceResults.performanceDynamics.energyMapping.map((mapping, index) => (
