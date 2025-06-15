@@ -420,8 +420,8 @@ const AnalysisTab = ({
               </h3>
               
               {/* Basic Quality Metrics */}
-              <div className="grid gap-4 md:grid-cols-4 mb-6">
-                <div className={`p-4 rounded border ${
+              <div className="grid gap-4 md:grid-cols-4 mb-6 justify-items-center">
+                <div className={`p-4 rounded border text-center ${
                   darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className={`text-3xl font-bold ${
@@ -434,7 +434,7 @@ const AnalysisTab = ({
                     Quality Score
                   </div>
                 </div>
-                <div className={`p-4 rounded border ${
+                <div className={`p-4 rounded border text-center ${
                   darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -444,7 +444,7 @@ const AnalysisTab = ({
                     Total Lines
                   </div>
                 </div>
-                <div className={`p-4 rounded border ${
+                <div className={`p-4 rounded border text-center ${
                   darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -454,7 +454,7 @@ const AnalysisTab = ({
                     Total Words
                   </div>
                 </div>
-                <div className={`p-4 rounded border ${
+                <div className={`p-4 rounded border text-center ${
                   darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -467,9 +467,9 @@ const AnalysisTab = ({
               </div>
 
               {/* Improvement Suggestion */}
-              <div className={`p-4 rounded border mb-6 text-center ${
+              <div className={`p-4 rounded border mb-6 ${
                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-200'
-              }`}>
+              }`} style={{ textAlign: 'center' }}>
                 <h4 className={`font-medium mb-2 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                   💡 Basic Assessment
                 </h4>

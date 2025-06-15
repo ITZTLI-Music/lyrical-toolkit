@@ -12,8 +12,9 @@ const Header = ({
   return (
     <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-50 transition-colors duration-300`}>
       <div className="max-w-6xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-2 mobile-header">
-          <div className="flex items-center gap-4 mobile-title">
+        {/* Top row: Use table-like display for perfect centering */}
+        <div style={{ display: 'table', width: '100%', marginBottom: '1rem' }}>
+          <div style={{ display: 'table-cell', width: '33.33%', verticalAlign: 'middle' }}>
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg transition-colors dark-mode-toggle ${
@@ -26,52 +27,15 @@ const Header = ({
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <h1 className="text-black p-4 text-3xl font-bold">
+          </div>
+          
+          <div style={{ display: 'table-cell', width: '33.33%', verticalAlign: 'middle', textAlign: 'center' }}>
+            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-black'}`}>
               Lyrical-Toolkit
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2 tab-container">
-              {['dictionary', 'synonyms', 'rhymes','upload','search', 'analysis', 'stats'].map((tab) => {
-                const icons = {
-                  search: Search,
-                  dictionary: Book,
-                  synonyms: Shuffle,
-                  rhymes: Music,
-                  analysis: BarChart3,
-                  upload: Upload,
-                  stats: BarChart3
-                };
-                const Icon = icons[tab];
-                
-                // Capitalize first letter for display
-                const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
-
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      setActiveTab(tab);
-                      setShowManual(false); // Close manual when switching tabs
-                    }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors tab-button ${
-                      activeTab === tab && !showManual
-                        ? darkMode 
-                          ? 'bg-black text-white'  // Keep black for dark mode selected
-                          : 'bg-gray-900 text-white'  // Keep dark for light mode selected
-                        : darkMode
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 inline mr-2" />
-                    {displayName}
-                  </button>
-                );
-              })}
-            </div>
-            
+          <div style={{ display: 'table-cell', width: '33.33%', verticalAlign: 'middle', textAlign: 'right' }}>
             <button
               onClick={() => {
                 setShowManual(!showManual);
@@ -89,6 +53,81 @@ const Header = ({
               <Book className="w-4 h-4 inline mr-2" />
               {showManual ? 'Hide Manual' : 'Show Manual'}
             </button>
+          </div>
+        </div>
+        
+        {/* Bottom row: Equal sized buttons for perfect centering */}
+        <div style={{ 
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <div style={{ 
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center'
+          }}>
+            {['dictionary', 'synonyms', 'rhymes','upload','search', 'analysis', 'stats'].map((tab) => {
+              const icons = {
+                search: Search,
+                dictionary: Book,
+                synonyms: Shuffle,
+                rhymes: Music,
+                analysis: BarChart3,
+                upload: Upload,
+                stats: BarChart3
+              };
+              const Icon = icons[tab];
+              
+              // Capitalize first letter for display
+              const displayName = tab.charAt(0).toUpperCase() + tab.slice(1);
+              
+              // Special styling for upload tab
+              const isUploadTab = tab === 'upload';
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    setShowManual(false); // Close manual when switching tabs
+                  }}
+                  style={{
+                    // Same size for all buttons
+                    paddingLeft: '1rem',
+                    paddingRight: '1rem',
+                    paddingTop: '0.5rem',
+                    paddingBottom: '0.5rem',
+                    borderRadius: '0.5rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s',
+                    border: isUploadTab ? '2px solid' : '1px solid',
+                    borderColor: isUploadTab 
+                      ? (darkMode ? '#3b82f6' : '#60a5fa')
+                      : (darkMode ? '#4b5563' : '#d1d5db'),
+                    backgroundColor: activeTab === tab && !showManual
+                      ? (darkMode ? '#000000' : '#1f2937')
+                      : isUploadTab
+                        ? (darkMode ? '#1e3a8a' : '#dbeafe')
+                        : (darkMode ? '#374151' : '#f3f4f6'),
+                    color: activeTab === tab && !showManual
+                      ? '#ffffff'
+                      : isUploadTab
+                        ? (darkMode ? '#93c5fd' : '#1e40af')
+                        : (darkMode ? '#d1d5db' : '#374151'),
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '120px' // Ensure consistent width
+                  }}
+                >
+                  <Icon style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />
+                  {displayName}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

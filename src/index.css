@@ -897,3 +897,10 @@ input:focus {
 .z-50 {
   z-index: 50;
 }
+
+/* Add this to your index.css file */
+.upload-tab-large {
+  padding: 1rem 2rem !important;
+  font-size: 1.125rem !important;
+  min-height: 3rem !important;
+}
