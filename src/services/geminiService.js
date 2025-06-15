@@ -205,7 +205,7 @@ Return JSON with this EXACT structure in mind:
   "thematicUnity": "excellent", "good", "fair", or "weak",
   "narrativeConsistency": "excellent", "good", "fair", or "weak",
   "sectionConnections": "excellent", "good", "fair", or "weak",
-  "overallAssessment": "Long explanatory objective summary of what the lyrics accomplish and how they function",
+  "overallAssessment": "Long explanatory, deeply analytical objective summary of what the lyrics accomplish, how they function and are structured",
   "references": [
     {
       "type": "biblical",

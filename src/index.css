@@ -904,3 +904,42 @@ input:focus {
   font-size: 1.125rem !important;
   min-height: 3rem !important;
 }
+
+/* Header responsive styles */
+.desktop-header {
+  display: block;
+}
+
+.mobile-header {
+  display: none;
+}
+
+.desktop-tabs {
+  display: flex;
+}
+
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-header {
+    display: none;
+  }
+  
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  
+  .desktop-tabs {
+    display: none;
+  }
+  
+  .mobile-tabs {
+    display: flex;
+    justify-content: center;
+  }
+}

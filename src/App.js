@@ -711,7 +711,7 @@ const LyricsSearchApp = () => {
                 (activeTab === 'rhymes' && rhymeLoading) ? '...' : 
                 activeTab === 'dictionary' ? 'Define' :
                 activeTab === 'synonyms' ? 'Search' :
-                activeTab === 'rhymes' ? 'Find Rhymes' : 'Search'}
+                activeTab === 'rhymes' ? 'Find' : 'Search'}
               </button>
             </div>
           )}
