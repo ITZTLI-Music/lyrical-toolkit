@@ -613,7 +613,8 @@ const AnalysisTab = ({
                               </h5>
                             </div>
                             
-                            <div className="overflow-x-auto">
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
                               <table className="w-full">
                                 <thead className={`${
                                   darkMode ? 'bg-gray-750' : 'bg-gray-100'
@@ -676,6 +677,61 @@ const AnalysisTab = ({
                                   ))}
                                 </tbody>
                               </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3 p-3">
+                              {coherenceResults.references.map((ref, index) => (
+                                <div key={index} className={`p-3 rounded border ${
+                                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                                }`}>
+                                  {/* Reference Header */}
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <h6 className={`font-medium text-sm ${
+                                        darkMode ? 'text-white' : 'text-gray-900'
+                                      }`}>
+                                        {ref.reference}
+                                      </h6>
+                                    </div>
+                                    <span className={`ml-2 inline-block text-xs px-2 py-1 rounded uppercase font-semibold flex-shrink-0 ${
+                                      darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-800'
+                                    }`}>
+                                      {ref.type.charAt(0).toUpperCase() + ref.type.slice(1)}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Context (if available) */}
+                                  {ref.context && ref.context !== '—' && (
+                                    <div className="mb-2">
+                                      <span className={`text-xs font-medium ${
+                                        darkMode ? 'text-gray-400' : 'text-gray-600'
+                                      }`}>
+                                        Context: 
+                                      </span>
+                                      <span className={`text-sm ml-1 ${
+                                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                                      }`}>
+                                        {ref.context}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Explanation */}
+                                  <div>
+                                    <span className={`text-xs font-medium ${
+                                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
+                                      Explanation: 
+                                    </span>
+                                    <p className={`text-sm mt-1 ${
+                                      darkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
+                                      {ref.explanation}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
