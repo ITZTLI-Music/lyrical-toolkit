@@ -782,64 +782,44 @@ export const detectOverusedPhrases = (lyrics) => {
   return overusedPhrases.sort((a, b) => b.count - a.count);
 };
 
-// Comprehensive writing quality analysis
+// Comprehensive writing quality analysis - SIMPLIFIED VERSION
 export const performWritingQualityAnalysis = (lyrics) => {
   if (!lyrics || typeof lyrics !== 'string') {
     return {
-      weakWords: [],
-      cliches: [],
-      powerWords: [],
-      overusedPhrases: [],
       summary: {
         qualityScore: 100,
-        totalIssues: 0,
-        strengths: 0,
+        totalLines: 0,
+        totalWords: 0,
         improvement: 'No analysis available'
       }
     };
   }
   
-  const weakWords = detectWeakWords(lyrics);
-  const cliches = detectCliches(lyrics);
-  const powerWords = detectPowerWords(lyrics);
-  const overusedPhrases = detectOverusedPhrases(lyrics);
+  const lines = lyrics.split('\n').filter(line => line.trim().length > 0);
+  const words = lyrics.split(/\s+/).filter(word => word.match(/[a-zA-Z]/));
   
-  // Calculate quality score
-  const wordCount = lyrics.split(/\s+/).length;
-  const totalIssues = weakWords.length + cliches.length + overusedPhrases.length;
-  const strengths = powerWords.length;
-  
-  // Quality score calculation (0-100)
+  // Simple quality score based on basic metrics
   let qualityScore = 100;
-  qualityScore -= Math.min(30, (weakWords.length / wordCount) * 1000); // Penalize weak words
-  qualityScore -= Math.min(25, cliches.length * 5); // Penalize clichés heavily
-  qualityScore -= Math.min(20, overusedPhrases.length * 3); // Penalize repetition
-  qualityScore += Math.min(15, (powerWords.length / wordCount) * 500); // Reward power words
+  const avgWordsPerLine = words.length / Math.max(1, lines.length);
+  const avgWordLength = words.reduce((sum, word) => sum + word.length, 0) / Math.max(1, words.length);
+  
+  // Adjust score based on basic metrics
+  if (avgWordsPerLine < 3) qualityScore -= 10;
+  if (avgWordsPerLine > 15) qualityScore -= 5;
+  if (avgWordLength < 3) qualityScore -= 10;
   
   qualityScore = Math.max(0, Math.min(100, Math.round(qualityScore)));
   
-  // Generate improvement suggestion
-  let improvement = 'Great work! ';
-  if (weakWords.length > wordCount * 0.05) {
-    improvement = 'Consider reducing weak words like "very", "really", "just". ';
-  } else if (cliches.length > 2) {
-    improvement = 'Try replacing clichés with fresh, original expressions. ';
-  } else if (overusedPhrases.length > 1) {
-    improvement = 'Vary your phrasing to avoid repetition. ';
-  } else if (powerWords.length < wordCount * 0.02) {
-    improvement = 'Consider adding more impactful, vivid words. ';
-  }
-  
   return {
-    weakWords,
-    cliches,
-    powerWords,
-    overusedPhrases,
     summary: {
       qualityScore,
-      totalIssues,
-      strengths,
-      improvement: improvement.trim()
+      totalLines: lines.length,
+      totalWords: words.length,
+      avgWordsPerLine: Math.round(avgWordsPerLine * 10) / 10,
+      avgWordLength: Math.round(avgWordLength * 10) / 10,
+      improvement: qualityScore >= 80 ? 'Great work!' : 
+                   qualityScore >= 60 ? 'Good foundation, consider refining.' : 
+                   'Consider expanding and refining your lyrics.'
     }
   };
 };

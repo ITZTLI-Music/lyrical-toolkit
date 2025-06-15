@@ -33,7 +33,7 @@ const Header = ({
           
           <div className="flex items-center gap-4">
             <div className="flex gap-2 tab-container">
-              {['dictionary', 'synonyms', 'rhymes','search', 'analysis', 'upload', 'stats'].map((tab) => {
+              {['dictionary', 'synonyms', 'rhymes','upload','search', 'analysis', 'stats'].map((tab) => {
                 const icons = {
                   search: Search,
                   dictionary: Book,
