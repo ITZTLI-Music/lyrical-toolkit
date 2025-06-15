@@ -12,7 +12,7 @@ const RhymeEditor = ({
   isEditMode,
   setIsEditMode
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [selectedWord, setSelectedWord] = useState(null);
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });

@@ -25,6 +25,10 @@ const AnalysisTab = ({
   // Add coherence analysis state
   const [coherenceResults, setCoherenceResults] = useState(null);
   const [coherenceLoading, setCoherenceLoading] = useState(false);
+  
+  // Add performance analysis state
+  const [performanceResults, setPerformanceResults] = useState(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const handleRhymingDictionary = () => {
     if (songs.length === 0) {
@@ -69,12 +73,15 @@ const AnalysisTab = ({
   };
 
   const handleWritingQuality = () => {
-    if (!selectedSongForAnalysis) return;
-    const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
-    if (!song) return;
+  if (!selectedSongForAnalysis) return;
+  const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
+  if (!song) return;
 
-    setAnalysisResults(null); 
-    setAnalysisType('writing-quality-loading');
+  // Clear performance results when running writing quality
+  setPerformanceResults(null);
+
+  setAnalysisResults(null); 
+  setAnalysisType('writing-quality-loading');
     
     try {
       const qualityAnalysis = performWritingQualityAnalysis(song.lyrics);
@@ -111,6 +118,32 @@ const AnalysisTab = ({
     }
     
     setCoherenceLoading(false);
+  };
+
+  const handlePerformanceAnalysis = async () => {
+  if (!selectedSongForAnalysis) return;
+  const song = songs.find(s => s.id.toString() === selectedSongForAnalysis.toString());
+  if (!song) return;
+
+  // Clear writing quality results when running performance analysis
+  setAnalysisResults(null);
+  setAnalysisType(null);
+
+  setPerformanceLoading(true);
+  setPerformanceResults(null);
+    
+    try {
+      const result = await geminiService.analyzePerformanceAndStyle(song.lyrics, song.title);
+      setPerformanceResults(result);
+    } catch (error) {
+      console.error('Error in performance analysis:', error);
+      setPerformanceResults({
+        success: false,
+        error: error.message
+      });
+    }
+    
+    setPerformanceLoading(false);
   };
 
   const handleRhymeScheme = () => {
@@ -227,7 +260,7 @@ const AnalysisTab = ({
         </button>
         
         <button
-          onClick={handleFlowRhythm}
+          onClick={handlePerformanceAnalysis}
           disabled={!selectedSongForAnalysis}
           className={`p-4 rounded-lg border transition-colors ${
             selectedSongForAnalysis
@@ -239,9 +272,9 @@ const AnalysisTab = ({
                 : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
-          <h3 className="font-medium mb-2">Flow & Rhythm</h3>
+          <h3 className="font-medium mb-2">Performance & Style</h3>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Analyze meter and flow patterns
+            AI analysis of vocal flow and style
           </p>
         </button>
 
@@ -260,7 +293,7 @@ const AnalysisTab = ({
         >
           <h3 className="font-medium mb-2">Writing Quality</h3>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Detect weak words, clichés & power words
+            Technical and AI Writing Analysis
           </p>
         </button>
       </div>
@@ -372,72 +405,6 @@ const AnalysisTab = ({
             </div>
           )}
 
-          {analysisType === 'flow-rhythm-loading' && (
-             <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Flow & Rhythm...</div>
-          )}
-
-          {analysisType === 'flow-rhythm' && (
-            <div>
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Flow & Rhythm Analysis: "{analysisResults.song.title}"
-              </h3>
-              
-              {/* Skip the Overall Scores section that was showing NaN% */}
-
-              {/* Rhythm Variation Summary */}
-              {analysisResults.rhythmVariation && (
-                <div className={`p-4 rounded border mb-6 ${
-                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <h4 className={`font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Rhythm Analysis Summary
-                  </h4>
-                  <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {analysisResults.rhythmVariation.summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Section Breakdown */}
-              {analysisResults.rhythmVariation?.sectionBreakdown && (
-                <div className="space-y-4">
-                  <h4 className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Section Analysis
-                  </h4>
-                  {analysisResults.rhythmVariation.sectionBreakdown.map((section, index) => (
-                    <div key={index} className={`p-4 rounded border ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                    }`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <h5 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          Section {index + 1}
-                        </h5>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {section.avgSyllables} avg syllables • {section.dominantMeter} meter
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        {section.lines.slice(0, 3).map((line, lineIndex) => (
-                          <div key={lineIndex} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            <span className={`inline-block w-8 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {line.syllables}
-                            </span>
-                            {line.text}
-                          </div>
-                        ))}
-                        {section.lines.length > 3 && (
-                          <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                            ... and {section.lines.length - 3} more lines
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {analysisType === 'writing-quality-loading' && (
              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Analyzing Writing Quality...</div>
           )}
@@ -511,7 +478,7 @@ const AnalysisTab = ({
               <div className={`p-4 rounded border mb-4 ${
                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
               }`}>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4 mb-4">
                   <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     🤖 AI Writing Analysis
                   </h4>
@@ -563,7 +530,7 @@ const AnalysisTab = ({
                             darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
                           }`}>
                             <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {coherenceResults.storyFlow}
+                              {coherenceResults.storyFlow.charAt(0).toUpperCase() + coherenceResults.storyFlow.slice(1)}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                               Story Flow
@@ -573,7 +540,7 @@ const AnalysisTab = ({
                             darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
                           }`}>
                             <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {coherenceResults.thematicUnity}
+                              {coherenceResults.thematicUnity.charAt(0).toUpperCase() + coherenceResults.thematicUnity.slice(1)}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                               Theme Unity
@@ -583,7 +550,7 @@ const AnalysisTab = ({
                             darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
                           }`}>
                             <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {coherenceResults.narrativeConsistency}
+                              {coherenceResults.narrativeConsistency.charAt(0).toUpperCase() + coherenceResults.narrativeConsistency.slice(1)}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                               Consistency
@@ -593,7 +560,7 @@ const AnalysisTab = ({
                             darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
                           }`}>
                             <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {coherenceResults.sectionConnections}
+                              {coherenceResults.sectionConnections.charAt(0).toUpperCase() + coherenceResults.sectionConnections.slice(1)}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                               Connections
@@ -612,6 +579,22 @@ const AnalysisTab = ({
                             {coherenceResults.overallAssessment}
                           </p>
                         </div>
+
+                        {/* Observations */}
+                        {coherenceResults.observations.length > 0 && (
+                          <div className={`p-3 rounded border mb-4 ${
+                            darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+                          }`}>
+                            <h5 className={`font-medium mb-2 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                              🔍 Analysis Observations
+                            </h5>
+                            <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {coherenceResults.observations.map((observation, index) => (
+                                <li key={index}>• {observation}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {/* References */}
                         {coherenceResults.references && coherenceResults.references.length > 0 && (
@@ -665,36 +648,7 @@ const AnalysisTab = ({
                                     }`}>
                                       <td className="px-3 py-3 align-top">
                                         <span className={`inline-block text-xs px-2 py-1 rounded uppercase font-semibold ${
-                                          ref.type === 'biblical' ? 
-                                            darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-200 text-yellow-800' :
-                                          ref.type === 'literary' ? 
-                                            darkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-200 text-blue-800' :
-                                          ref.type === 'historical' ? 
-                                            darkMode ? 'bg-green-800 text-green-200' : 'bg-green-200 text-green-800' :
-                                          ref.type === 'cultural' ? 
-                                            darkMode ? 'bg-purple-800 text-purple-200' : 'bg-purple-200 text-purple-800' :
-                                          ref.type === 'mythological' ? 
-                                            darkMode ? 'bg-red-800 text-red-200' : 'bg-red-200 text-red-800' :
-                                          ref.type === 'anime' || ref.type === 'manga' || ref.type === 'anime/manga' ?
-                                            darkMode ? 'bg-pink-800 text-pink-200' : 'bg-pink-200 text-pink-800' :
-                                          ref.type === 'gaming' || ref.type === 'video game' ?
-                                            darkMode ? 'bg-cyan-800 text-cyan-200' : 'bg-cyan-200 text-cyan-800' :
-                                          ref.type === 'pop culture' ?
-                                            darkMode ? 'bg-orange-800 text-orange-200' : 'bg-orange-200 text-orange-800' :
-                                          ref.type === 'psychological' ?
-                                            darkMode ? 'bg-indigo-800 text-indigo-200' : 'bg-indigo-200 text-indigo-800' :
-                                          ref.type === 'political' ?
-                                            darkMode ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-800' :
-                                          ref.type === 'historical/literary' ?
-                                            darkMode ? 'bg-teal-800 text-teal-200' : 'bg-teal-200 text-teal-800' :
-                                          ref.type === 'religious' ?
-                                            darkMode ? 'bg-amber-800 text-amber-200' : 'bg-amber-200 text-amber-800' :
-                                          ref.type === 'philosophical' ?
-                                            darkMode ? 'bg-violet-800 text-violet-200' : 'bg-violet-200 text-violet-800' :
-                                          ref.type === 'scientific' ?
-                                            darkMode ? 'bg-emerald-800 text-emerald-200' : 'bg-emerald-200 text-emerald-800' :
-                                          // Default for any other types - use a readable color scheme
-                                          darkMode ? 'bg-stone-800 text-stone-200' : 'bg-stone-200 text-stone-800'
+                                          darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
                                         }`}>
                                           {ref.type.charAt(0).toUpperCase() + ref.type.slice(1)}
                                         </span>
@@ -736,55 +690,376 @@ const AnalysisTab = ({
               </div>
             </div>
           )}
-         {analysisType === 'meter-analysis' && (
-         <div>
-           <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-             Syllable & Meter Analysis: "{analysisResults.song.title}"
-           </h3>
-           
-           <div className="space-y-2">
-             {analysisResults.meterAnalysis.map((lineData, index) => (
-               <div key={index} className="flex items-center gap-4 py-2">
-                 <span className={`w-12 text-center font-mono text-sm font-bold flex-shrink-0 ${
-                   darkMode ? 'text-blue-400' : 'text-blue-600'
+
+          {analysisType === 'meter-analysis' && (
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Syllable & Meter Analysis: "{analysisResults.song.title}"
+              </h3>
+              
+              <div className="space-y-2">
+                {analysisResults.meterAnalysis.map((lineData, index) => (
+                  <div key={index} className="flex items-center gap-4 py-2">
+                    <span className={`w-12 text-center font-mono text-sm font-bold flex-shrink-0 ${
+                      darkMode ? 'text-blue-400' : 'text-blue-600'
+                    }`}>
+                      {lineData.syllables}
+                    </span>
+                    <span className={`flex-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {lineData.line.trim() || '(empty line)'}
+                    </span>
+                    <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {lineData.words} words
+                    </span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className={`mt-4 p-4 rounded border ${
+                darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div>
+                    <strong>Average syllables per line:</strong> {
+                      (analysisResults.meterAnalysis.reduce((sum, line) => sum + line.syllables, 0) / 
+                      Math.max(1, analysisResults.meterAnalysis.filter(line => line.line.trim()).length)).toFixed(1)
+                    }
+                  </div>
+                  <div>
+                    <strong>Total lines:</strong> {analysisResults.meterAnalysis.filter(line => line.line.trim()).length}
+                  </div>
+                  <div>
+                    <strong>Syllable range:</strong> {
+                      Math.min(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
+                    } - {
+                      Math.max(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>                     
+      )}
+
+      {/* Performance Analysis Loading */}
+      {performanceLoading && (
+        <div className={`p-4 rounded border mt-6 ${
+          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            🎤 Analyzing Performance & Style...
+          </div>
+        </div>
+      )}
+
+      {/* Performance Analysis Results - COMPLETELY SEPARATE SECTION */}
+      {performanceResults && (
+        <div className={`rounded border mt-6 ${
+          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          <div className={`p-4 border-b ${
+            darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-between">
+              <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                🎤 Performance & Style Analysis: "{songs.find(s => s.id.toString() === selectedSongForAnalysis)?.title}"
+              </h3>
+              <button
+                onClick={handlePerformanceAnalysis}
+                disabled={performanceLoading}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  performanceLoading
+                    ? darkMode
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {performanceLoading ? 'Analyzing...' : 'Re-analyze'}
+              </button>
+            </div>
+            {performanceResults.fromCache && (
+              <div className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                📋 Results from cache
+              </div>
+            )}
+          </div>
+
+          <div className="p-4">
+            {performanceResults.success ? (
+              <div className="space-y-6">
+                {/* Vocal Flow Section */}
+                <div className={`p-4 rounded border ${
+                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h4 className={`font-medium mb-3 flex items-center gap-2 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                    🌊 Vocal Flow
+                    <span className={`text-sm px-2 py-1 rounded ${
+                      performanceResults.vocalFlow.overallRating === 'smooth' ? 
+                        darkMode ? 'bg-green-800 text-green-200' : 'bg-green-200 text-green-800' :
+                      performanceResults.vocalFlow.overallRating === 'complex' ? 
+                        darkMode ? 'bg-orange-800 text-orange-200' : 'bg-orange-200 text-orange-800' :
+                      performanceResults.vocalFlow.overallRating === 'choppy' ? 
+                        darkMode ? 'bg-red-800 text-red-200' : 'bg-red-200 text-red-800' :
+                      performanceResults.vocalFlow.overallRating === 'varied' ? 
+                        darkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-200 text-blue-800' :
+                      darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
+                    }`}>
+                      {performanceResults.vocalFlow.overallRating}
+                    </span>
+                  </h4>
+                  {performanceResults.vocalFlow.flowPatterns.length > 0 && (
+                    <div className="mb-3">
+                      <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Flow Patterns:
+                      </h5>
+                      <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {performanceResults.vocalFlow.flowPatterns.map((pattern, index) => (
+                          <li key={index}>• {pattern}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {performanceResults.vocalFlow.difficultSections && performanceResults.vocalFlow.difficultSections.length > 0 && (
+                    <div>
+                      <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-orange-300' : 'text-orange-700'}`}>
+                        Challenging Sections:
+                      </h5>
+                      <ul className={`text-sm space-y-1 ${darkMode ? 'text-orange-200' : 'text-orange-600'}`}>
+                        {performanceResults.vocalFlow.difficultSections.map((section, index) => (
+                          <li key={index}>⚠️ {section}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Breath Control Section */}
+                <div className={`p-4 rounded border ${
+                  darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h4 className={`font-medium mb-3 flex items-center gap-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>
+                    💨 Breath Control
+                    <span className={`text-sm px-2 py-1 rounded ${
+                      performanceResults.breathControl.rating === 'excellent' ? 
+                        darkMode ? 'bg-green-800 text-green-200' : 'bg-green-200 text-green-800' :
+                      performanceResults.breathControl.rating === 'good' ? 
+                        darkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-200 text-blue-800' :
+                      performanceResults.breathControl.rating === 'fair' ? 
+                        darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-200 text-yellow-800' :
+                      darkMode ? 'bg-red-800 text-red-200' : 'bg-red-200 text-red-800'
+                    }`}>
+                      {performanceResults.breathControl.rating}
+                    </span>
+                  </h4>
+                 <div className="grid gap-3 md:grid-cols-2">
+                   {performanceResults.breathControl.naturalBreaks && performanceResults.breathControl.naturalBreaks.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                         Natural Breaks:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-green-200' : 'text-green-600'}`}>
+                         {performanceResults.breathControl.naturalBreaks.map((breakPoint, index) => (
+                           <li key={index}>✅ {breakPoint}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                   {performanceResults.breathControl.challengingSections && performanceResults.breathControl.challengingSections.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                         Challenging Sections:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-red-200' : 'text-red-600'}`}>
+                         {performanceResults.breathControl.challengingSections.map((section, index) => (
+                           <li key={index}>⚠️ {section}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                 </div>
+               </div>
+
+               {/* Performance Dynamics Section */}
+               {performanceResults.performanceDynamics.energyMapping && performanceResults.performanceDynamics.energyMapping.length > 0 && (
+                 <div className={`p-4 rounded border ${
+                   darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
                  }`}>
-                   {lineData.syllables}
-                 </span>
-                 <span className={`flex-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                   {lineData.line.trim() || '(empty line)'}
-                 </span>
-                 <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                   {lineData.words} words
-                 </span>
+                   <h4 className={`font-medium mb-3 ${darkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                     ⚡ Performance Dynamics
+                   </h4>
+                   <div className="space-y-2">
+                     {performanceResults.performanceDynamics.energyMapping.map((mapping, index) => (
+                       <div key={index} className="flex items-center gap-3">
+                         <span className={`text-sm font-medium min-w-20 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                           {mapping.section}:
+                         </span>
+                         <span className={`text-xs px-2 py-1 rounded font-medium ${
+                           mapping.energy === 'high' ? 
+                             darkMode ? 'bg-red-800 text-red-200' : 'bg-red-200 text-red-800' :
+                           mapping.energy === 'medium' ? 
+                             darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-200 text-yellow-800' :
+                           darkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-200 text-blue-800'
+                         }`}>
+                           {mapping.energy}
+                         </span>
+                         <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                           {mapping.description}
+                         </span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               )}
+
+               {/* Repetition Analysis Section */}
+               <div className={`p-4 rounded border ${
+                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+               }`}>
+                 <h4 className={`font-medium mb-3 ${darkMode ? 'text-orange-300' : 'text-orange-800'}`}>
+                   🔄 Repetition Analysis
+                 </h4>
+                 <div className="grid gap-3 md:grid-cols-3">
+                   {performanceResults.repetitionAnalysis.effectiveRepeats && performanceResults.repetitionAnalysis.effectiveRepeats.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                         Effective Repeats:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-green-200' : 'text-green-600'}`}>
+                         {performanceResults.repetitionAnalysis.effectiveRepeats.map((repeat, index) => (
+                           <li key={index}>✅ {repeat}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                   {performanceResults.repetitionAnalysis.overusedPhrases && performanceResults.repetitionAnalysis.overusedPhrases.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                         Overused:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-red-200' : 'text-red-600'}`}>
+                         {performanceResults.repetitionAnalysis.overusedPhrases.map((phrase, index) => (
+                           <li key={index}>⚠️ {phrase}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                   {performanceResults.repetitionAnalysis.missedOpportunities && performanceResults.repetitionAnalysis.missedOpportunities.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                         Opportunities:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-blue-200' : 'text-blue-600'}`}>
+                         {performanceResults.repetitionAnalysis.missedOpportunities.map((opportunity, index) => (
+                           <li key={index}>💡 {opportunity}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                 </div>
                </div>
-             ))}
-           </div>
-           
-           <div className={`mt-4 p-4 rounded border ${
-             darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-           }`}>
-             <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-               <div>
-                 <strong>Average syllables per line:</strong> {
-                   (analysisResults.meterAnalysis.reduce((sum, line) => sum + line.syllables, 0) / 
-                   Math.max(1, analysisResults.meterAnalysis.filter(line => line.line.trim()).length)).toFixed(1)
-                 }
+
+               {/* Emotional Progression Section */}
+               <div className={`p-4 rounded border ${
+                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+               }`}>
+                 <h4 className={`font-medium mb-3 ${darkMode ? 'text-pink-300' : 'text-pink-800'}`}>
+                   💭 Emotional Progression
+                 </h4>
+                 {performanceResults.emotionalProgression.arc && performanceResults.emotionalProgression.arc.length > 0 && (
+                   <div className="mb-3">
+                     <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                       Emotional Arc:
+                     </h5>
+                     <div className="flex items-center gap-2 flex-wrap">
+                       {performanceResults.emotionalProgression.arc.map((emotion, index) => (
+                         <React.Fragment key={index}>
+                           <span className={`px-2 py-1 rounded text-sm ${
+                             darkMode ? 'bg-pink-800 text-pink-200' : 'bg-pink-200 text-pink-800'
+                           }`}>
+                             {emotion}
+                           </span>
+                           {index < performanceResults.emotionalProgression.arc.length - 1 && (
+                             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>→</span>
+                           )}
+                         </React.Fragment>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+                 {performanceResults.emotionalProgression.keyMoments && performanceResults.emotionalProgression.keyMoments.length > 0 && (
+                   <div>
+                     <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                       Key Emotional Moments:
+                     </h5>
+                     <ul className={`text-sm space-y-1 ${darkMode ? 'text-pink-200' : 'text-pink-700'}`}>
+                       {performanceResults.emotionalProgression.keyMoments.map((moment, index) => (
+                         <li key={index}>🎯 {moment}</li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
                </div>
-               <div>
-                 <strong>Total lines:</strong> {analysisResults.meterAnalysis.filter(line => line.line.trim()).length}
-               </div>
-               <div>
-                 <strong>Syllable range:</strong> {
-                   Math.min(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
-                 } - {
-                   Math.max(...analysisResults.meterAnalysis.filter(line => line.line.trim()).map(line => line.syllables))
-                 }
+
+               {/* Era/Influence Section */}
+               <div className={`p-4 rounded border ${
+                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+               }`}>
+                 <h4 className={`font-medium mb-3 ${darkMode ? 'text-indigo-300' : 'text-indigo-800'}`}>
+                   🎵 Era & Influence Detection
+                 </h4>
+                 <div className="grid gap-3 md:grid-cols-3">
+                   <div>
+                     <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                       Primary Era:
+                     </h5>
+                     <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${
+                       darkMode ? 'bg-indigo-800 text-indigo-200' : 'bg-indigo-200 text-indigo-800'
+                     }`}>
+                       {performanceResults.eraInfluence.primaryEra}
+                     </span>
+                   </div>
+                   {performanceResults.eraInfluence.influences && performanceResults.eraInfluence.influences.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                         Influences:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-indigo-200' : 'text-indigo-700'}`}>
+                         {performanceResults.eraInfluence.influences.map((influence, index) => (
+                           <li key={index}>🎸 {influence}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                   {performanceResults.eraInfluence.modernElements && performanceResults.eraInfluence.modernElements.length > 0 && (
+                     <div>
+                       <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                         Modern Elements:
+                       </h5>
+                       <ul className={`text-sm space-y-1 ${darkMode ? 'text-indigo-200' : 'text-indigo-700'}`}>
+                         {performanceResults.eraInfluence.modernElements.map((element, index) => (
+                           <li key={index}>✨ {element}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                 </div>
                </div>
              </div>
-           </div>
+           ) : (
+             <div className={`p-4 rounded border ${
+               darkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
+             }`}>
+               <p className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+                 ❌ Analysis failed: {performanceResults.error}
+               </p>
+             </div>
+           )}
          </div>
-       )}
-       </div>                     
+       </div>
      )}
    </div>
   );

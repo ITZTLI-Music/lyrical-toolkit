@@ -189,9 +189,181 @@ Return JSON with this EXACT structure in mind:
 }`;
   }
 
+  async analyzePerformanceAndStyle(lyrics, songTitle = "Unknown Song") {
+    if (!this.genAI) {
+      throw new Error('Gemini API not initialized. Please check your API key.');
+    }
+
+    // Check cache first
+    const cacheKey = this.generateCacheKey(lyrics, 'performance');
+    if (this.cache.has(cacheKey)) {
+      console.log('Returning cached performance analysis');
+      return { ...this.cache.get(cacheKey), fromCache: true };
+    }
+
+    // Check rate limiting
+    if (!this.canMakeApiCall()) {
+      const waitTime = Math.ceil(this.getTimeUntilNextCall() / 1000);
+      throw new Error(`Rate limit exceeded. Please wait ${waitTime} seconds before analyzing again.`);
+    }
+
+    try {
+      const prompt = this.createPerformanceAnalysisPrompt(lyrics, songTitle);
+      
+      this.lastApiCall = Date.now();
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      let text = response.text();
+      
+      console.log('Raw performance analysis:', text);
+      
+      // Clean up the response text
+      text = text.trim();
+      if (text.startsWith('```json')) {
+        text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (text.startsWith('```')) {
+        text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        text = jsonMatch[0];
+      }
+      
+      let analysisData;
+      try {
+        analysisData = JSON.parse(text);
+        
+        // Ensure all required fields exist with proper validation
+        if (!analysisData.vocalFlow) analysisData.vocalFlow = {};
+        if (!analysisData.breathControl) analysisData.breathControl = {};
+        if (!analysisData.performanceDynamics) analysisData.performanceDynamics = {};
+        if (!analysisData.repetitionAnalysis) analysisData.repetitionAnalysis = {};
+        if (!analysisData.emotionalProgression) analysisData.emotionalProgression = {};
+        if (!analysisData.eraInfluence) analysisData.eraInfluence = {};
+        
+        // Set defaults for nested objects
+        analysisData.vocalFlow.overallRating = analysisData.vocalFlow.overallRating || 'moderate';
+        analysisData.vocalFlow.flowPatterns = Array.isArray(analysisData.vocalFlow.flowPatterns) ? analysisData.vocalFlow.flowPatterns : [];
+        analysisData.breathControl.rating = analysisData.breathControl.rating || 'fair';
+        analysisData.performanceDynamics.energyMapping = Array.isArray(analysisData.performanceDynamics.energyMapping) ? analysisData.performanceDynamics.energyMapping : [];
+        analysisData.repetitionAnalysis.effectiveRepeats = Array.isArray(analysisData.repetitionAnalysis.effectiveRepeats) ? analysisData.repetitionAnalysis.effectiveRepeats : [];
+        analysisData.emotionalProgression.arc = Array.isArray(analysisData.emotionalProgression.arc) ? analysisData.emotionalProgression.arc : [];
+        analysisData.eraInfluence.primaryEra = analysisData.eraInfluence.primaryEra || 'contemporary';
+        
+      } catch (parseError) {
+        console.error('Performance JSON parse error:', parseError);
+        console.error('Failed to parse:', text);
+        
+        // Fallback response
+        analysisData = {
+          vocalFlow: {
+            overallRating: 'moderate',
+            flowPatterns: ['Analysis completed with technical fallback'],
+            difficultSections: []
+          },
+          breathControl: {
+            rating: 'fair',
+            naturalBreaks: [],
+            challengingSections: []
+          },
+          performanceDynamics: {
+            energyMapping: [{ section: 'overall', energy: 'moderate', description: 'Consistent energy level' }]
+          },
+          repetitionAnalysis: {
+            effectiveRepeats: [],
+            overusedPhrases: [],
+            missedOpportunities: []
+          },
+          emotionalProgression: {
+            arc: ['steady emotional tone'],
+            keyMoments: []
+          },
+          eraInfluence: {
+            primaryEra: 'contemporary',
+            influences: [],
+            modernElements: []
+          }
+        };
+      }
+      
+      const result_data = {
+        success: true,
+        fromCache: false,
+        ...analysisData
+      };
+      
+      // Cache the result
+      this.cache.set(cacheKey, result_data);
+      
+      return result_data;
+      
+    } catch (error) {
+      console.error('Error analyzing performance and style:', error);
+      return {
+        success: false,
+        error: error.message,
+        fromCache: false
+      };
+    }
+  }
+
+  createPerformanceAnalysisPrompt(lyrics, songTitle) {
+    return `Analyze the performance and stylistic qualities of "${songTitle}".
+
+LYRICS TO ANALYZE:
+${lyrics}
+
+Provide detailed analysis of how these lyrics would perform when sung/delivered:
+
+1. VOCAL FLOW PATTERNS: How smoothly do the words flow? Are there natural emphasis points?
+2. BREATH CONTROL: Where are natural breathing spots? Any challenging sections?
+3. PERFORMANCE DYNAMICS: Where are the energy peaks and valleys throughout the song?
+4. REPETITION PATTERNS: What phrases repeat and how effective are they?
+5. EMOTIONAL PROGRESSION: How do emotions change from start to finish?
+6. ERA/INFLUENCE DETECTION: What musical periods, genres, or artists does this resemble?
+
+Be specific and practical - focus on how a performer would actually deliver these lyrics.
+
+Return JSON with this EXACT structure:
+{
+  "vocalFlow": {
+    "overallRating": "smooth/choppy/varied/complex",
+    "flowPatterns": ["specific observation about flow", "another flow observation"],
+    "difficultSections": ["sections that might be hard to deliver smoothly"]
+  },
+  "breathControl": {
+    "rating": "excellent/good/fair/challenging",
+    "naturalBreaks": ["where natural breathing occurs", "other break points"],
+    "challengingSections": ["long phrases without breaks", "rapid sections"]
+  },
+  "performanceDynamics": {
+    "energyMapping": [
+      {"section": "verse 1", "energy": "low/medium/high", "description": "mood description"},
+      {"section": "chorus", "energy": "low/medium/high", "description": "mood description"}
+    ]
+  },
+  "repetitionAnalysis": {
+    "effectiveRepeats": ["phrases that repeat well for emphasis"],
+    "overusedPhrases": ["phrases that repeat too much"],
+    "missedOpportunities": ["suggestions for strategic repetition"]
+  },
+  "emotionalProgression": {
+    "arc": ["starting emotion", "middle emotion", "ending emotion"],
+    "keyMoments": ["emotional peaks or significant shifts"]
+  },
+  "eraInfluence": {
+    "primaryEra": "specific time period or genre",
+    "influences": ["artists or bands this resembles"],
+    "modernElements": ["contemporary touches in the lyrics"]
+  }
+}`;
+  }
+
   // Clear cache (useful for testing)
   clearCache() {
     this.cache.clear();
+
   }
 }
 
