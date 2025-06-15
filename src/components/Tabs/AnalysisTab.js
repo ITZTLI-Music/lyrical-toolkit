@@ -467,7 +467,7 @@ const AnalysisTab = ({
               </div>
 
               {/* Improvement Suggestion */}
-              <div className={`p-4 rounded border mb-6 ${
+              <div className={`p-4 rounded border mb-6 text-center ${
                 darkMode ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-200'
               }`}>
                 <h4 className={`font-medium mb-2 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
