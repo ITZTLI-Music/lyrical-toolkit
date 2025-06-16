@@ -40,7 +40,7 @@ const LyricsSearchApp = () => {
   // Basic state
   const [songs, setSongs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('search');
+  const [activeTab, setActiveTab] = useState('upload');
   const [selectedSong, setSelectedSong] = useState(null);
   
   // Use custom hooks for localStorage
