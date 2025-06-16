@@ -138,14 +138,14 @@ const UploadTab = ({
                     />
                     <button
                       onClick={() => onDeleteSong(song.id)}
-                      className={`p-0.5 md:p-1 rounded transition-colors ${
+                      className={`text-xs md:text-sm px-2 md:px-3 py-1 rounded transition-colors ${
                         darkMode 
                           ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                          : 'text-red-500 hover:bg-red-50 hover:text-red-700'
+                          : 'bg-gray-200 hover:bg-gray-300 text-red-600'
                       }`}
                       title="Delete song"
                     >
-                      <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                      <Trash2 className="w-3 h-3 md:w-4 md:h-4" style={{ width: '12px', height: '12px' }} />
                     </button>
                   </div>
                 </div>
