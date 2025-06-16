@@ -46,6 +46,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://api.dictionaryapi.dev" />
     <link rel="preconnect" href="https://api.datamuse.com" />
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      // Check for opt-out parameter or localStorage flag
+      const urlParams = new URLSearchParams(window.location.search);
+      const optOut = urlParams.get('optout');
+      
+      if (optOut === 'true') {
+        localStorage.setItem('gaOptOut', 'true');
+        alert('Analytics tracking disabled for this device!');
+      }
+      
+      // Don't track if opted out
+      const isOptedOut = localStorage.getItem('gaOptOut') === 'true';
+      
+      if (!isOptedOut) {
+        gtag('config', 'G-N5FGVLHSXG', {
+          // Additional configuration options
+          anonymize_ip: true,
+          allow_google_signals: false,
+          allow_ad_personalization_signals: false
+        });
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
